@@ -3,10 +3,9 @@
 import { useState } from 'react';
 
 // hooks
-import useAlert from '@hooks/useAlert';
-
-// components
-import Input from '@components/Form/Input';
+import useAlert from '../../hooks/useAlert';
+//components
+import Input from '../Form/Input';
 
 // interfaces
 interface IFormProps {
