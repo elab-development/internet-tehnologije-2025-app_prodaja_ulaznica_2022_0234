@@ -1,17 +1,32 @@
+import Heading from './Components/Heading/Heading'
 import Header from './Components/layout/Header'
+import Section from './Components/Section/Section'
+import FormSearch from './Components/home/FormSearch'   
+import CircleButtons from './Components/home/CircleButtons'  
 
 function App() {
   return (
     <div>
-      <Header />
-      <main className="container mx-auto p-8">
-        <h1 className="text-4xl font-bold text-gray-800">
-          Dobrodošli na veb sajt za prodaju ulaznica! 🎫
-        </h1>
-        <p className="text-gray-600 mt-4">
-          Header je sada aktivan - probaj dropdown i mobile menu!
-        </p>
-      </main>
+      <Section className='white-background'>
+      <div className='container'>
+        <div className='center'>
+          <Heading type={1} color='gray' text='WELCOME' />
+          <p className='gray'>Look for any kinds of events, in any country and city that you want.</p>
+        </div>
+      </div>
+      <div className='center'>
+        <div className='container'>
+          <div className='top-search'>
+            <FormSearch />
+          </div>
+        </div>
+        <div className='circle-buttons'>
+          <CircleButtons />
+        </div>
+      </div>
+
+      
+    </Section>
     </div>
   )
 }
