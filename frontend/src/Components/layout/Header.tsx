@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 // hooks
 import useClickOutside from '../../hooks/useClickOutside';
+import { useAuth } from '../../hooks/useAuth';
 
 // components
 import Dropdown from '../common/Dropdown';
@@ -11,6 +12,8 @@ import ProfilePhoto from '../common/ProfilePhoto';
 
 const Header: React.FC = () => {
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
 
   const [menu, setMenu] = useState<boolean>(false);
   const [dropdown, setDropdown] = useState<boolean>(false);
@@ -21,6 +24,12 @@ const Header: React.FC = () => {
 
   const menuState = (): void => {
     setMenu((state) => !state);
+  };
+
+  const handleLogout = (): void => {
+    logout();
+    setDropdown(false);
+    navigate('/login');
   };
 
   return (
@@ -45,37 +54,77 @@ const Header: React.FC = () => {
 
           {/* Navigation */}
           <div className="hidden md:flex gap-6">
-            <Link to="/" className="text-gray-600 hover:text-blue-600">
+            <Link to="/" className="text-gray-600 hover:text-blue-600 transition">
               Home
             </Link>
-            <Link to="/contact" className="text-gray-600 hover:text-blue-600">
-              Contact us
-            </Link>
-            <Link to="/news" className="text-gray-600 hover:text-blue-600">
-              News
+            {isAuthenticated && (
+              <>
+                <Link to="/events/search" className="text-gray-600 hover:text-blue-600 transition">
+                  Search Events
+                </Link>
+                <Link to="/my-tickets" className="text-gray-600 hover:text-blue-600 transition">
+                  My Tickets
+                </Link>
+                {isAdmin && (
+                  <Link to="/admin/dashboard" className="text-gray-600 hover:text-blue-600 transition">
+                    Admin Panel
+                  </Link>
+                )}
+              </>
+            )}
+            <Link to="/contact" className="text-gray-600 hover:text-blue-600 transition">
+              Contact
             </Link>
           </div>
 
           {/* User Section */}
-          <div className="relative flex items-center gap-4" ref={wrapperRef}>
-            <Link to="/members/account">
-              <ProfilePhoto image="https://via.placeholder.com/150" size="small" />
-            </Link>
-            <button
-              type="button"
-              className="flex items-center gap-2"
-              onClick={() => setDropdown(!dropdown)}
-            >
-              User
-              <span>{dropdown ? '▲' : '▼'}</span>
-            </button>
-            {dropdown && (
-              <Dropdown color="gray">
-                <DropdownItem url="members/tickets" text="My tickets" />
-                <DropdownItem url="members/account" text="My account" />
-                <hr className="my-2" />
-                <DropdownItem url="members/signout" text="Sign out" />
-              </Dropdown>
+          <div className="relative flex items-center gap-4">
+            {isAuthenticated ? (
+              <div className="relative flex items-center gap-4" ref={wrapperRef}>
+                <ProfilePhoto image="https://via.placeholder.com/150" size="small" />
+                <button
+                  type="button"
+                  className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition"
+                  onClick={() => setDropdown(!dropdown)}
+                >
+                  {user?.name || 'User'}
+                  <span>{dropdown ? '▲' : '▼'}</span>
+                </button>
+                {dropdown && (
+                  <Dropdown color="gray">
+                    <DropdownItem url="/my-tickets" text="My tickets" />
+                    <DropdownItem url="/my-reservations" text="My reservations" />
+                    {isAdmin && (
+                      <>
+                        <hr className="my-2" />
+                        <DropdownItem url="/admin/dashboard" text="Admin Dashboard" />
+                      </>
+                    )}
+                    <hr className="my-2" />
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100 transition"
+                    >
+                      Sign out
+                    </button>
+                  </Dropdown>
+                )}
+              </div>
+            ) : (
+              <div className="flex gap-4">
+                <Link
+                  to="/login"
+                  className="px-4 py-2 text-blue-600 hover:text-blue-700 transition"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/register"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                >
+                  Sign Up
+                </Link>
+              </div>
             )}
           </div>
         </div>
@@ -89,9 +138,51 @@ const Header: React.FC = () => {
               ✕
             </button>
             <nav className="flex flex-col gap-4">
-              <Link to="/" className="text-lg">Home</Link>
-              <Link to="/news" className="text-lg">News</Link>
-              <Link to="/contact" className="text-lg">Contact us</Link>
+              <Link to="/" className="text-lg hover:text-blue-600" onClick={menuState}>
+                Home
+              </Link>
+              {isAuthenticated && (
+                <>
+                  <Link to="/events/search" className="text-lg hover:text-blue-600" onClick={menuState}>
+                    Search Events
+                  </Link>
+                  <Link to="/my-tickets" className="text-lg hover:text-blue-600" onClick={menuState}>
+                    My Tickets
+                  </Link>
+                  <Link to="/my-reservations" className="text-lg hover:text-blue-600" onClick={menuState}>
+                    My Reservations
+                  </Link>
+                  {isAdmin && (
+                    <Link to="/admin/dashboard" className="text-lg hover:text-blue-600" onClick={menuState}>
+                      Admin Panel
+                    </Link>
+                  )}
+                </>
+              )}
+              <Link to="/contact" className="text-lg hover:text-blue-600" onClick={menuState}>
+                Contact
+              </Link>
+              <hr className="my-4" />
+              {isAuthenticated ? (
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    menuState();
+                  }}
+                  className="text-lg text-red-600 text-left"
+                >
+                  Sign out
+                </button>
+              ) : (
+                <>
+                  <Link to="/login" className="text-lg hover:text-blue-600" onClick={menuState}>
+                    Sign In
+                  </Link>
+                  <Link to="/register" className="text-lg hover:text-blue-600" onClick={menuState}>
+                    Sign Up
+                  </Link>
+                </>
+              )}
             </nav>
           </div>
         </div>

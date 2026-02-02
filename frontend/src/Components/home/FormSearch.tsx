@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 // hooks
-import useAlert from '../../hooks/useAlert';
+import {useAlert} from '../../hooks/useAlert';
 //components
 import Input from '../form/Input';
 

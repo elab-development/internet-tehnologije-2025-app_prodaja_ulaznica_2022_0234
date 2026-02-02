@@ -8,4 +8,4 @@ const useAlert = (): IAlertContext => {
   return { alert, hideAlert, showAlert };
 };
 
-export default useAlert;
+export { useAlert };

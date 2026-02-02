@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { api } from '../services/api';
+import { useAuth } from '../hooks/useAuth';
+import { useAlert } from '../hooks/useAlert';
+import Input from '../components/form/Input';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
+  const { showAlert } = useAlert();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -20,19 +23,30 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
 
     try {
-      const response = await api.post('/login', formData);
+      await login(formData.email, formData.password);
       
-      // Čuvaj token u localStorage
-      localStorage.setItem('token', response.data.token);
+      // Redirect na osnovu role
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (user.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/');
+      }
       
-      // Redirect na home
-      navigate('/');
+      showAlert({
+        type: 'success',
+        text: 'Successfully logged in!',
+        show: true
+      });
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      showAlert({
+        type: 'error',
+        text: err.response?.data?.message || 'Login failed. Please try again.',
+        show: true
+      });
     } finally {
       setLoading(false);
     }
@@ -46,25 +60,18 @@ const Login: React.FC = () => {
           <p className="text-gray-600 mt-2">Sign in to your account</p>
         </div>
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
               Email Address
             </label>
-            <input
-              type="email"
-              id="email"
+            <Input
               name="email"
+              type="email"
               value={formData.email}
               onChange={handleChange}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              maxLength={100}
               placeholder="your@email.com"
             />
           </div>
@@ -73,14 +80,13 @@ const Login: React.FC = () => {
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
               Password
             </label>
-            <input
-              type="password"
-              id="password"
+            <Input
               name="password"
+              type="password"
               value={formData.password}
               onChange={handleChange}
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              maxLength={50}
               placeholder="••••••••"
             />
           </div>
@@ -104,7 +110,7 @@ const Login: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-gray-400"
+            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
@@ -113,7 +119,7 @@ const Login: React.FC = () => {
         <div className="mt-6 text-center">
           <p className="text-gray-600">
             Don't have an account?{' '}
-            <Link to="/signup" className="text-blue-600 font-semibold hover:underline">
+            <Link to="/register" className="text-blue-600 font-semibold hover:underline">
               Sign up
             </Link>
           </p>
