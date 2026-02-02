@@ -1,5 +1,5 @@
-import Slider from '../../Components/Slider/Slider'
-import ButtonCircle from '../../Components/Button/ButtonCircle'
+import Slider from '../Slider/Slider'
+import ButtonCircle from '../button/ButtonCircle'
 
 const CircleButtons: React.FC = () => (
   <Slider>
