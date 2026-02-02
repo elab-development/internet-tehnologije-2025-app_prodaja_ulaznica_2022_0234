@@ -2,7 +2,8 @@ import Heading from './Components/Heading/Heading'
 import Header from './Components/layout/Header'
 import Section from './Components/Section/Section'
 import FormSearch from './Components/home/FormSearch'   
-import CircleButtons from './Components/home/CircleButtons'  
+import CircleButtons from './Components/home/CircleButtons' 
+
 
 function App() {
   return (
