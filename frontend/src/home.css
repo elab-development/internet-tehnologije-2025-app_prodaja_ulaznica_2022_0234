@@ -1,0 +1,165 @@
+/* Hero Section */
+.hero-section {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 80px 20px;
+  color: white;
+}
+
+.hero-title {
+  font-size: 48px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.hero-section .subtitle {
+  font-size: 18px;
+  margin-top: 10px;
+  opacity: 0.9;
+}
+
+.search-container {
+  max-width: 800px;
+  margin: 40px auto 0;
+}
+
+/* Search Form */
+.search-form {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.search-inputs {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 1.5fr auto;
+  gap: 15px;
+}
+
+@media (max-width: 768px) {
+  .search-inputs {
+    grid-template-columns: 1fr;
+  }
+}
+
+.input-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.input-group input {
+  border: none;
+  background: transparent;
+  flex: 1;
+  outline: none;
+  font-size: 14px;
+}
+
+.input-group .material-symbols-outlined {
+  color: #666;
+  font-size: 20px;
+}
+
+.btn-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.btn-search:hover {
+  background: #5568d3;
+  transform: translateY(-2px);
+}
+
+/* Category Section */
+.category-section {
+  margin-top: 30px;
+}
+
+.circle-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  color: #333;
+  transition: transform 0.3s;
+}
+
+.circle-button:hover {
+  transform: translateY(-5px);
+}
+
+.circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.circle .material-symbols-outlined {
+  color: white;
+  font-size: 32px;
+}
+
+.circle-button .text {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+/* Sections */
+.white-background {
+  background: white;
+  padding: 60px 20px;
+}
+
+.light-background {
+  background: #f8f9fa;
+  padding: 60px 20px;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.center {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.center h2 {
+  margin-bottom: 10px;
+  font-size: 32px;
+}
+
+.center p {
+  color: #666;
+  font-size: 16px;
+}
+
+.gray {
+  color: #666;
+}
+
+.event-grid {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}

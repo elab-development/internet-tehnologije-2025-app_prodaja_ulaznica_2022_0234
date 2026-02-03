@@ -1,35 +1,31 @@
-import Heading from './components/heading/Heading'
-import Header from './components/layout/Header'
-import Section from './components/section/Section'
-import FormSearch from './components/home/FormSearch'   
-import CircleButtons from './components/home/CircleButtons' 
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './providers/AuthProvider';
+import { AlertProvider } from './providers/AlertProvider';
+import Alert from './Components/alert/Alert';
 
+import HomePage from './pages/HomePage';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Help from './pages/Help';
+import ContactUs from './pages/ContactUs';
 
 function App() {
   return (
-    <div>
-      <Section className='white-background'>
-      <div className='container'>
-        <div className='center'>
-          <Heading type={1} color='gray' text='WELCOME' />
-          <p className='gray'>Look for any kinds of events, in any country and city that you want.</p>
-        </div>
-      </div>
-      <div className='center'>
-        <div className='container'>
-          <div className='top-search'>
-            <FormSearch />
-          </div>
-        </div>
-        <div className='circle-buttons'>
-          <CircleButtons />
-        </div>
-      </div>
-
-      
-    </Section>
-    </div>
-  )
+    <Router>
+      <AuthProvider>
+        <AlertProvider>
+          <Alert />
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/help" element={<Help />} />
+            <Route path="/contact" element={<ContactUs />} />
+          </Routes>
+        </AlertProvider>
+      </AuthProvider>
+    </Router>
+  );
 }
 
-export default App
+export default App;

@@ -1,3 +1,6 @@
+import '../home.css';
+
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
@@ -5,11 +8,11 @@ import { useAlert } from '../hooks/useAlert';
 import { Event } from '../types';
 
 // Components
-import Master from '../components/layout/Master';
-import Section from '../components/section/Section';
-import Heading from '../components/heading/Heading';
-import FormSearch from '../components/home/FormSearch';
-import CardGroup from '../components/card/CardGroup';
+import Master from '../Components/layout/Master';
+import Section from '../Components/Section/Section';
+import Heading from '../Components/Heading/Heading';
+import FormSearch from '../Components/home/FormSearch';
+import CardGroup from '../Components/card/CardGroup';
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();

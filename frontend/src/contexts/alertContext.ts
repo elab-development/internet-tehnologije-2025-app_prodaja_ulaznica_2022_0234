@@ -1,24 +1,15 @@
-
-
 import { createContext } from 'react';
 
-// interfaces
-export interface IAlert {
-  type: string;
+export interface AlertState {
+  show: boolean;
+  type: 'success' | 'error' | 'warning' | 'info';
   text: string;
-  show?: boolean | false;
 }
 
-export interface IAlertContext {
-  alert: IAlert;
+export interface AlertContextType {
+  alert: AlertState;
+  showAlert: (alert: AlertState) => void;
   hideAlert: () => void;
-  showAlert: (alert: IAlert) => void;
 }
 
-export const initialState = {
-  alert: { type: '', text: '', show: false },
-  hideAlert: () => {},
-  showAlert: () => {},
-};
-
-export const AlertContext = createContext<IAlertContext>(initialState);
+export const AlertContext = createContext<AlertContextType | undefined>(undefined);

@@ -1,4 +1,5 @@
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
+
 
 // interfaces
 interface IProps {
@@ -10,7 +11,7 @@ interface IProps {
 }
 
 const ButtonLink: React.FC<IProps> = ({ url, text, color, leftIcon, rightIcon }) => (
-  <Link className={`button ${color}`} href={`/${url}`}>
+  <Link className={`button ${color}`} to={`/${url}`}>
     {leftIcon !== undefined && (
       <span className='material-symbols-outlined left-icon'>{leftIcon}</span>
     )}
