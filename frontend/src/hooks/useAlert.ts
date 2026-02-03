@@ -1,11 +1,12 @@
-import { use } from 'react';
+import { useContext } from 'react';
+import { AlertContext, AlertContextType } from '../contexts/alertContext';
 
-import { AlertContext, type IAlertContext } from '../contexts/alertContext';
-
-const useAlert = (): IAlertContext => {
-  const { alert, hideAlert, showAlert } = use(AlertContext);
-
-  return { alert, hideAlert, showAlert };
+export const useAlert = (): AlertContextType => {
+  const context = useContext(AlertContext);
+  
+  if (context === undefined) {
+    throw new Error('useAlert must be used within an AlertProvider');
+  }
+  
+  return context;
 };
-
-export { useAlert };
