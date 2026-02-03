@@ -4,7 +4,7 @@ import ButtonLink from '../button/ButtonLink';
 const Footer: React.FC = () => (
   <footer className="bg-gray-900 text-white py-12">
     <div className="container mx-auto px-4">
-      {/* Main footer content */}
+      {/* Sadržaj Footer-a */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
         {/* Logo */}
         <div>
@@ -15,39 +15,39 @@ const Footer: React.FC = () => (
           </Link>
         </div>
 
-        {/* Links Column 1 */}
+        {/* Linkovi kolona 1 */}
         <div className="flex flex-col gap-3">
-          <Link to="/" className="text-gray-300 hover:text-white">Home</Link>
-          <Link to="/venues" className="text-gray-300 hover:text-white">Venues</Link>
-          <Link to="/members/tickets" className="text-gray-300 hover:text-white">My tickets</Link>
-          <Link to="/members/account" className="text-gray-300 hover:text-white">My account</Link>
+          <Link to="/" className="text-gray-300 hover:text-white">Početna stranica</Link>
+          <Link to="/venues" className="text-gray-300 hover:text-white">Mesta događaja</Link>
+          <Link to="/members/tickets" className="text-gray-300 hover:text-white">Moje karte</Link>
+          <Link to="/members/account" className="text-gray-300 hover:text-white">Moj nalog</Link>
         </div>
 
-        {/* Links Column 2 */}
+        {/* Linkovi kolona 2 */}
         <div className="flex flex-col gap-3">
-          <Link to="/help" className="text-gray-300 hover:text-white">Help</Link>
-          <Link to="/news" className="text-gray-300 hover:text-white">News</Link>
-          <Link to="/contact" className="text-gray-300 hover:text-white">Contact us</Link>
-          <Link to="/promoters" className="text-gray-300 hover:text-white">For promoters</Link>
+          <Link to="/help" className="text-gray-300 hover:text-white">Pomoć</Link>
+          <Link to="/news" className="text-gray-300 hover:text-white">Vesti</Link>
+          <Link to="/contact" className="text-gray-300 hover:text-white">Kontaktirajte nas</Link>
+          <Link to="/promoters" className="text-gray-300 hover:text-white">Za promotere</Link>
         </div>
 
-        {/* Sign up/in */}
+        {/* Login/Registracija */}
         <div className="flex flex-col gap-4">
-          <Link to="/members/signup" className="text-gray-300 hover:text-white">Sign up</Link>
-          <span className="text-gray-500">or</span>
-          <ButtonLink color="blue-filled" text="Sign in" url="members/signin" />
+          <Link to="/members/signup" className="text-gray-300 hover:text-white">Registrujte se</Link>
+          <span className="text-gray-500">ili</span>
+          <ButtonLink color="blue-filled" text="Prijavite se" url="members/signin" />
         </div>
       </div>
 
       {/* Newsletter */}
       <div className="bg-gray-800 rounded-lg p-6 mb-8">
-        <p className="text-gray-300 mb-4">Don't miss the latest on Modern ticketing news and events.</p>
+        <p className="text-gray-300 mb-4">Ne propustite najnovije događaje</p>
         <div className="flex gap-2">
           <input
             type="email"
             name="email"
             autoComplete="off"
-            placeholder="your@emailaddress.com"
+            placeholder="vaša@emailadresa.com"
             className="flex-1 px-4 py-2 rounded-lg bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-blue-500"
             required
           />
@@ -62,13 +62,13 @@ const Footer: React.FC = () => (
 
       {/* Copyright */}
       <div className="border-t border-gray-700 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
-        <span className="text-gray-400">&copy; 2024 - Modern ticketing</span>
+        <span className="text-gray-400">&copy; 2026 - Jeka i Comi</span>
         <div className="flex gap-2 text-gray-400 text-sm">
-          <Link to="/legal/privacy-policy" className="hover:text-white">Privacy policy</Link>
+          <Link to="/legal/privacy-policy" className="hover:text-white">Politika privatnosti</Link>
           <span>&bull;</span>
-          <Link to="/legal/cookies" className="hover:text-white">Cookies</Link>
+          <Link to="/legal/cookies" className="hover:text-white">Kolačići</Link>
           <span>&bull;</span>
-          <Link to="/legal/terms-of-service" className="hover:text-white">Terms of service</Link>
+          <Link to="/legal/terms-of-service" className="hover:text-white">Uslovi korišćenja</Link>
         </div>
       </div>
     </div>

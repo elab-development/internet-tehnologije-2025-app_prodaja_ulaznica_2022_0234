@@ -31,7 +31,7 @@ const HomePage: React.FC = () => {
     } catch (error: any) {
       showAlert({
         type: 'error',
-        text: error.response?.data?.message || 'Failed to load events',
+        text: error.response?.data?.message || 'Neuspešno učitavanje događaja',
         show: true,
       });
     } finally {
@@ -58,12 +58,11 @@ const HomePage: React.FC = () => {
     <Master>
       <Section className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
-          <Heading type={1} color="text-gray-800" text="Upcoming Events" />
+          <Heading type={1} color="text-gray-800" text="Nadolazeći događaji" />
           <p className="text-gray-600 mt-2 text-lg">
-            Browse and book tickets for the hottest events
+            Pretražite i kupite karte za najveće događaje
           </p>
         </div>
-
         {/* Search forma */}
         <div className="max-w-2xl mx-auto mb-12">
           <FormSearch />
@@ -72,7 +71,7 @@ const HomePage: React.FC = () => {
         {loading ? (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="text-gray-500 mt-4">Loading events...</p>
+            <p className="text-gray-500 mt-4">Učitavanje događaja...</p>
           </div>
         ) : events.length === 0 ? (
           <div className="text-center py-12 bg-gray-50 rounded-lg">
@@ -176,15 +175,15 @@ const HomePage: React.FC = () => {
                         <span className="text-sm text-gray-500">
                           {event.available_tickets > 0 ? (
                             <span className="text-green-600 font-semibold">
-                              {event.available_tickets} tickets available
+                              {event.available_tickets} Dostupne karte
                             </span>
                           ) : (
-                            <span className="text-red-600 font-semibold">Sold out</span>
+                            <span className="text-red-600 font-semibold">Rasprodato</span>
                           )}
                         </span>
                       )}
                       <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition">
-                        View Details →
+                        Vidi detalje →
                       </button>
                     </div>
                   </div>

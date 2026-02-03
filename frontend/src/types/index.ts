@@ -1,8 +1,10 @@
 export interface User {
   id: number;
-  name: string;
+  korisnickoIme: string;
   email: string;
-  role: 'admin' | 'user';
+  role: 'guest' | 'user' | 'admin';
+  ime?: string;
+  prezime?: string;
 }
 
 export interface Event {

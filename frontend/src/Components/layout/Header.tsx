@@ -26,8 +26,8 @@ const Header: React.FC = () => {
     setMenu((state) => !state);
   };
 
-  const handleLogout = (): void => {
-    logout();
+  const handleLogout = async (): Promise<void> => {
+    await logout();
     setDropdown(false);
     navigate('/login');
   };
@@ -55,15 +55,15 @@ const Header: React.FC = () => {
           {/* Navigation */}
           <div className="hidden md:flex gap-6">
             <Link to="/" className="text-gray-600 hover:text-blue-600 transition">
-              Home
+              Početna stranica
             </Link>
             {isAuthenticated && (
               <>
                 <Link to="/events/search" className="text-gray-600 hover:text-blue-600 transition">
-                  Search Events
+                  Pretraži događaje
                 </Link>
                 <Link to="/my-tickets" className="text-gray-600 hover:text-blue-600 transition">
-                  My Tickets
+                  Moje karte
                 </Link>
                 {isAdmin && (
                   <Link to="/admin/dashboard" className="text-gray-600 hover:text-blue-600 transition">
@@ -73,7 +73,7 @@ const Header: React.FC = () => {
               </>
             )}
             <Link to="/contact" className="text-gray-600 hover:text-blue-600 transition">
-              Contact
+              Kontaktirajte nas
             </Link>
           </div>
 
@@ -87,13 +87,13 @@ const Header: React.FC = () => {
                   className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition"
                   onClick={() => setDropdown(!dropdown)}
                 >
-                  {user?.name || 'User'}
+                  {user?.korisnickoIme || 'Korisnik'}
                   <span>{dropdown ? '▲' : '▼'}</span>
                 </button>
                 {dropdown && (
                   <Dropdown color="gray">
-                    <DropdownItem url="/my-tickets" text="My tickets" />
-                    <DropdownItem url="/my-reservations" text="My reservations" />
+                    <DropdownItem url="/my-tickets" text="Moje karte" />
+                    <DropdownItem url="/my-reservations" text="Moje rezervacije" />
                     {isAdmin && (
                       <>
                         <hr className="my-2" />
@@ -105,7 +105,7 @@ const Header: React.FC = () => {
                       onClick={handleLogout}
                       className="w-full text-left px-4 py-2 hover:bg-gray-100 transition"
                     >
-                      Sign out
+                      Odjavite se
                     </button>
                   </Dropdown>
                 )}
@@ -116,13 +116,13 @@ const Header: React.FC = () => {
                   to="/login"
                   className="px-4 py-2 text-blue-600 hover:text-blue-700 transition"
                 >
-                  Sign In
+                  Prijavite se
                 </Link>
                 <Link
                   to="/register"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                 >
-                  Sign Up
+                  Registrujte se
                 </Link>
               </div>
             )}
@@ -130,7 +130,7 @@ const Header: React.FC = () => {
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Meni */}
       {menu && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50">
           <div className="bg-white w-64 h-full p-6">
@@ -139,18 +139,18 @@ const Header: React.FC = () => {
             </button>
             <nav className="flex flex-col gap-4">
               <Link to="/" className="text-lg hover:text-blue-600" onClick={menuState}>
-                Home
+                Početna stranica
               </Link>
               {isAuthenticated && (
                 <>
                   <Link to="/events/search" className="text-lg hover:text-blue-600" onClick={menuState}>
-                    Search Events
+                    Pretraži događaje
                   </Link>
                   <Link to="/my-tickets" className="text-lg hover:text-blue-600" onClick={menuState}>
-                    My Tickets
+                    Moje karte
                   </Link>
                   <Link to="/my-reservations" className="text-lg hover:text-blue-600" onClick={menuState}>
-                    My Reservations
+                    Moje rezervacije
                   </Link>
                   {isAdmin && (
                     <Link to="/admin/dashboard" className="text-lg hover:text-blue-600" onClick={menuState}>
@@ -160,7 +160,7 @@ const Header: React.FC = () => {
                 </>
               )}
               <Link to="/contact" className="text-lg hover:text-blue-600" onClick={menuState}>
-                Contact
+                Kontaktirajte nas
               </Link>
               <hr className="my-4" />
               {isAuthenticated ? (
@@ -171,15 +171,15 @@ const Header: React.FC = () => {
                   }}
                   className="text-lg text-red-600 text-left"
                 >
-                  Sign out
+                  Odjavite se
                 </button>
               ) : (
                 <>
                   <Link to="/login" className="text-lg hover:text-blue-600" onClick={menuState}>
-                    Sign In
+                    Prijavite se
                   </Link>
                   <Link to="/register" className="text-lg hover:text-blue-600" onClick={menuState}>
-                    Sign Up
+                    Registrujte se
                   </Link>
                 </>
               )}
