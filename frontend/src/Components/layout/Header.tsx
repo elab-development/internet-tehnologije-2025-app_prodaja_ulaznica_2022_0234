@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
+
 // hooks
 import useClickOutside from '../../hooks/useClickOutside';
 import { useAuth } from '../../hooks/useAuth';
@@ -62,8 +63,8 @@ const Header: React.FC = () => {
                 <Link to="/events/search" className="text-gray-600 hover:text-blue-600 transition">
                   Pretraži događaje
                 </Link>
-                <Link to="/my-tickets" className="text-gray-600 hover:text-blue-600 transition">
-                  Moje karte
+                <Link to="/account" className="text-gray-600 hover:text-blue-600 transition">
+                  Moj nalog
                 </Link>
                 {isAdmin && (
                   <Link to="/admin/dashboard" className="text-gray-600 hover:text-blue-600 transition">
@@ -92,6 +93,7 @@ const Header: React.FC = () => {
                 </button>
                 {dropdown && (
                   <Dropdown color="gray">
+                    <DropdownItem url="/account" text="Moj nalog" />
                     <DropdownItem url="/my-tickets" text="Moje karte" />
                     <DropdownItem url="/my-reservations" text="Moje rezervacije" />
                     {isAdmin && (
@@ -119,8 +121,8 @@ const Header: React.FC = () => {
                   Prijavite se
                 </Link>
                 <Link
-                  to="/register"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                  to="/register" style={{ color: 'white' }}
+                  className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition"
                 >
                   Registrujte se
                 </Link>

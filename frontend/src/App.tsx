@@ -1,13 +1,14 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './providers/AuthProvider';
 import { AlertProvider } from './providers/AlertProvider';
-import Alert from './components/alert/Alert';
+import Alert from './Components/alert/Alert';
 
 import HomePage from './pages/HomePage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Help from './pages/Help';
 import ContactUs from './pages/ContactUs';
+import MyAccount from './pages/MyAccount';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/help" element={<Help />} />
             <Route path="/contact" element={<ContactUs />} />
+            <Route path="/account" element={<MyAccount />} />
           </Routes>
         </AlertProvider>
       </AuthProvider>

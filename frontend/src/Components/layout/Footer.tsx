@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import ButtonLink from '../button/ButtonLink';
+import ButtonLink from '../Button/ButtonLink';
 
 const Footer: React.FC = () => (
   <footer className="bg-gray-900 text-white py-12">

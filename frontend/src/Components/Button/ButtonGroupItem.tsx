@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 
 // interfaces
 interface IProps {
@@ -20,7 +20,7 @@ const ButtonGroupItem: React.FC<IProps> = ({ url, text, active, disabled }) => {
   }
 
   return (
-    <Link className={`button ${className}`} href={`/${url}`}>
+    <Link className={`button ${className}`} to={`/${url}`}>
       {text}
     </Link>
   );

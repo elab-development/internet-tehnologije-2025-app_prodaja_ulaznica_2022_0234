@@ -135,18 +135,18 @@ const Help: React.FC = () => {
 
         {/* FAQ Section */}
         <div className="mb-12">
-          <Heading type={2} color="text-gray-800" text="Cesto postavljana pitanja" />
+          <Heading type={2} color="text-gray-800 text-xl" text="Cesto postavljana pitanja" />
           
-          {/* Category Filter */}
+          {/* Category Filter - All buttons blue with white text */}
           <div className="flex flex-wrap gap-2 mt-6 mb-8">
             {categories.map((category) => (
               <button
                 key={category}
                 onClick={() => setActiveCategory(category)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+                className={`px-4 py-2 rounded-full text-sm font-medium text-white transition ${
                   activeCategory === category
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-blue-800'
+                    : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               >
                 {category}
@@ -159,15 +159,16 @@ const Help: React.FC = () => {
             {filteredFAQ.map((faq, index) => (
               <div
                 key={index}
-                className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden"
+                className=" rounded-lg shadow-sm overflow-hidden"
               >
                 <button
                   onClick={() => toggleFAQ(index)}
-                  className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition"
+                  style={{ backgroundColor: '#2563eb', color: 'white' }}
+                  className="w-full px-6 py-4 text-left flex items-center justify-between bg-blue-600 hover:bg-blue-700 transition"
                 >
-                  <span className="font-medium text-gray-800">{faq.question}</span>
+                  <span className="font-medium text-white">{faq.question}</span>
                   <svg
-                    className={`w-5 h-5 text-gray-500 transform transition ${
+                    className={`w-5 h-5 text-white transform transition ${
                       expandedFAQ === index ? 'rotate-180' : ''
                     }`}
                     fill="none"
@@ -178,8 +179,8 @@ const Help: React.FC = () => {
                   </svg>
                 </button>
                 {expandedFAQ === index && (
-                  <div className="px-6 pb-4">
-                    <p className="text-gray-600">{faq.answer}</p>
+                  <div className="px-6 pb-4  bg-white">
+                    <p className="text-gray-600 pt-4">{faq.answer}</p>
                     <span className="inline-block mt-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
                       {faq.category}
                     </span>
@@ -196,6 +197,7 @@ const Help: React.FC = () => {
           <p className="text-gray-600 mb-4">Kontaktirajte nas direktno i rado cemo vam pomoci.</p>
           <Link
             to="/contact"
+            style={{ color: 'white' }}
             className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
           >
             Kontaktirajte nas

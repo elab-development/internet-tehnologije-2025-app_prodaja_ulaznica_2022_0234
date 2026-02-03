@@ -6,96 +6,14 @@ import Section from '../components/section/Section';
 import Heading from '../components/heading/Heading';
 import Input from '../components/form/Input';
 
-interface FAQItem {
-  question: string;
-  answer: string;
-  category: string;
-}
-
-const faqData: FAQItem[] = [
-  // Kupovina karata
-  {
-    category: 'Kupovina karata',
-    question: 'Kako mogu kupiti kartu?',
-    answer: 'Da biste kupili kartu, potrebno je da se registrujete i prijavite na naš sistem. Nakon toga, izaberite događaj koji vas interesuje, odaberite tip karte i pratite uputstva za kupovinu. Plaćanje je moguće putem kreditne kartice ili drugih dostupnih metoda plaćanja.'
-  },
-  {
-    category: 'Kupovina karata',
-    question: 'Šta je red čekanja i kako funkcioniše?',
-    answer: 'Red čekanja se aktivira kada je potražnja za kartama velika. Kada uđete u red čekanja, dobićete poziciju i obaveštenje kada dođete na red. Nakon što dobijete pristup, imate ograničeno vreme da završite kupovinu.'
-  },
-  {
-    category: 'Kupovina karata',
-    question: 'Koliko vremena imam da završim kupovinu?',
-    answer: 'Nakon što rezervišete karte, imate ograničeno vreme (obično 10-15 minuta) da završite plaćanje. Ako ne završite kupovinu u tom roku, karte će biti oslobođene i ponovo dostupne drugim korisnicima.'
-  },
-  {
-    category: 'Kupovina karata',
-    question: 'Mogu li kupiti više karata odjednom?',
-    answer: 'Da, možete kupiti više karata u jednoj transakciji. Maksimalan broj karata po kupovini zavisi od pravila organizatora događaja.'
-  },
-  // Plaćanje
-  {
-    category: 'Plaćanje',
-    question: 'Koji načini plaćanja su dostupni?',
-    answer: 'Prihvatamo plaćanje kreditnim i debitnim karticama (Visa, MasterCard, Maestro). U zavisnosti od događaja, mogu biti dostupne i druge opcije plaćanja.'
-  },
-  {
-    category: 'Plaćanje',
-    question: 'Da li je moje plaćanje sigurno?',
-    answer: 'Da, sva plaćanja se obrađuju putem sigurnih, sertifikovanih platnih sistema. Vaši podaci o kartici se ne čuvaju na našim serverima i koriste se najnoviji standardi zaštite podataka.'
-  },
-  {
-    category: 'Plaćanje',
-    question: 'Šta ako plaćanje ne prođe?',
-    answer: 'Ako plaćanje ne uspe, vaša rezervacija ostaje aktivna dok ne istekne sesija. Pokušajte ponovo sa drugim načinom plaćanja ili proverite da li imate dovoljno sredstava na računu.'
-  },
-  // Otkazivanje i povraćaj
-  {
-    category: 'Otkazivanje i povraćaj',
-    question: 'Mogu li otkazati rezervaciju?',
-    answer: 'Da, možete otkazati rezervaciju pre nego što završite plaćanje. Nakon uspešnog plaćanja, mogućnost otkazivanja zavisi od politike organizatora događaja.'
-  },
-  {
-    category: 'Otkazivanje i povraćaj',
-    question: 'Kako mogu dobiti povraćaj novca?',
-    answer: 'Povraćaj novca je moguć u skladu sa politikom otkazivanja organizatora. Kontaktirajte našu korisničku podršku sa brojem narudžbine za više informacija.'
-  },
-  // Korisnički nalog
-  {
-    category: 'Korisnički nalog',
-    question: 'Kako se registrujem?',
-    answer: 'Kliknite na dugme "Registracija" u gornjem desnom uglu stranice. Unesite vaše ime, email adresu i izaberite lozinku. Nakon potvrde email adrese, vaš nalog će biti aktiviran.'
-  },
-  {
-    category: 'Korisnički nalog',
-    question: 'Zaboravio/la sam lozinku. Šta da radim?',
-    answer: 'Na stranici za prijavu kliknite na "Zaboravljena lozinka". Unesite vašu email adresu i poslaćemo vam link za resetovanje lozinke.'
-  },
-  {
-    category: 'Korisnički nalog',
-    question: 'Gde mogu videti svoje kupljene karte?',
-    answer: 'Sve vaše kupljene karte možete videti u sekciji "Moje karte" nakon prijave na vaš nalog. Tamo možete preuzeti karte u elektronskom formatu.'
-  },
-];
-
-const HelpContact: React.FC = () => {
+const ContactUs: React.FC = () => {
   const { showAlert } = useAlert();
-  const [activeCategory, setActiveCategory] = useState<string>('Sve');
-  const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
   const [contactForm, setContactForm] = useState({
     name: '',
     email: '',
-    subject: '',
     message: '',
   });
   const [loading, setLoading] = useState(false);
-
-  const categories = ['Sve', ...Array.from(new Set(faqData.map(f => f.category)))];
-
-  const filteredFAQ = activeCategory === 'Sve' 
-    ? faqData 
-    : faqData.filter(f => f.category === activeCategory);
 
   const handleContactChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setContactForm({
@@ -115,7 +33,7 @@ const HelpContact: React.FC = () => {
         text: 'Vaša poruka je uspešno poslata! Odgovorićemo vam u najkraćem roku.',
         show: true,
       });
-      setContactForm({ name: '', email: '', subject: '', message: '' });
+      setContactForm({ name: '', email: '', message: '' });
     } catch (error: any) {
       showAlert({
         type: 'error',
@@ -127,120 +45,25 @@ const HelpContact: React.FC = () => {
     }
   };
 
-  const toggleFAQ = (index: number) => {
-    setExpandedFAQ(expandedFAQ === index ? null : index);
-  };
-
   return (
     <Master>
       {/* Hero Section */}
       <div className="bg-gradient-to-br from-blue-600 to-purple-700 text-white py-16">
         <div className="container mx-auto px-4 text-center">
-          <Heading type={1} color="text-white" text="Pomoć i Kontakt" />
+          <Heading type={1} color="text-white" text="Kontaktirajte nas" />
           <p className="text-xl mt-4 text-blue-100 max-w-2xl mx-auto">
-            Pronađite odgovore na najčešća pitanja ili nas kontaktirajte direktno
+            Imate pitanje? Pišite nam i odgovorićemo vam u najkraćem roku.
           </p>
         </div>
       </div>
 
       <Section className="container mx-auto px-4 py-12">
-        {/* Quick Help Cards */}
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
-          <div className="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Kupovina karata</h3>
-            <p className="text-gray-600 text-sm">Saznajte kako da kupite karte za omiljene događaje</p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Plaćanje</h3>
-            <p className="text-gray-600 text-sm">Informacije o sigurnom plaćanju i metodama</p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition">
-            <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Korisnički nalog</h3>
-            <p className="text-gray-600 text-sm">Upravljanje nalogom i vašim kartama</p>
-          </div>
-        </div>
-
-        {/* FAQ Section */}
-        <div className="mb-16">
-          <Heading type={2} color="text-gray-800" text="Često postavljana pitanja" />
-          
-          {/* Category Filter */}
-          <div className="flex flex-wrap gap-2 mt-6 mb-8">
-            {categories.map((category) => (
-              <button
-                key={category}
-                onClick={() => setActiveCategory(category)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition ${
-                  activeCategory === category
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {category}
-              </button>
-            ))}
-          </div>
-
-          {/* FAQ Items */}
-          <div className="space-y-4">
-            {filteredFAQ.map((faq, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden"
-              >
-                <button
-                  onClick={() => toggleFAQ(index)}
-                  className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition"
-                >
-                  <span className="font-medium text-gray-800">{faq.question}</span>
-                  <svg
-                    className={`w-5 h-5 text-gray-500 transform transition ${
-                      expandedFAQ === index ? 'rotate-180' : ''
-                    }`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {expandedFAQ === index && (
-                  <div className="px-6 pb-4">
-                    <p className="text-gray-600">{faq.answer}</p>
-                    <span className="inline-block mt-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                      {faq.category}
-                    </span>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Contact Section */}
         <div className="grid md:grid-cols-2 gap-12">
           {/* Contact Form */}
           <div>
-            <Heading type={2} color="text-gray-800" text="Kontaktirajte nas" />
+            <Heading type={2} color="text-gray-800" text="Pošaljite nam poruku" />
             <p className="text-gray-600 mt-2 mb-6">
-              Niste pronašli odgovor? Pošaljite nam poruku i odgovorićemo vam u najkraćem roku.
+              Popunite formu ispod i javićemo vam se u najkraćem roku.
             </p>
 
             <form onSubmit={handleContactSubmit} className="space-y-4">
@@ -276,26 +99,6 @@ const HelpContact: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tema
-                </label>
-                <select
-                  name="subject"
-                  value={contactForm.subject}
-                  onChange={handleContactChange as any}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                >
-                  <option value="">Izaberite temu</option>
-                  <option value="kupovina">Kupovina karata</option>
-                  <option value="placanje">Plaćanje</option>
-                  <option value="otkazivanje">Otkazivanje / Povraćaj</option>
-                  <option value="tehnicka-podrska">Tehnička podrška</option>
-                  <option value="ostalo">Ostalo</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Poruka
                 </label>
                 <textarea
@@ -304,7 +107,7 @@ const HelpContact: React.FC = () => {
                   onChange={handleContactChange}
                   required
                   maxLength={1000}
-                  rows={5}
+                  rows={6}
                   placeholder="Opišite vaš problem ili pitanje..."
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none"
                 />
@@ -423,4 +226,4 @@ const HelpContact: React.FC = () => {
   );
 };
 
-export default HelpContact;
+export default ContactUs;
