@@ -27,7 +27,7 @@ const FormSearch: React.FC<FormSearchProps> = ({ onSearch }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg p-6">
+    <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-xl border border-gray-200 p-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Search Query */}
         <div className="md:col-span-2">
