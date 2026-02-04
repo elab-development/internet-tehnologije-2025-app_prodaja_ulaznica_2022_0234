@@ -9,6 +9,9 @@ import Register from './pages/Register';
 import Help from './pages/Help';
 import ContactUs from './pages/ContactUs';
 import MyAccount from './pages/MyAccount';
+import EventDetail from './pages/EventDetail';
+import Checkout from './pages/Checkout';
+import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
   return (
@@ -23,6 +26,10 @@ function App() {
             <Route path="/help" element={<Help />} />
             <Route path="/contact" element={<ContactUs />} />
             <Route path="/account" element={<MyAccount />} />
+            <Route path="/events/:id" element={<EventDetail />} />
+            <Route path="/checkout/:purchaseId" element={<Checkout />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+
           </Routes>
         </AlertProvider>
       </AuthProvider>
