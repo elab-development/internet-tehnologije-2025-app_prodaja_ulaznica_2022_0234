@@ -12,6 +12,7 @@ import MyAccount from './pages/MyAccount';
 import EventDetail from './pages/EventDetail';
 import Checkout from './pages/Checkout';
 import AdminDashboard from './pages/AdminDashboard';
+import CreateEvent from './pages/CreateEvent';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
             <Route path="/events/:id" element={<EventDetail />} />
             <Route path="/checkout/:purchaseId" element={<Checkout />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/events/create" element={<CreateEvent />} />
 
           </Routes>
         </AlertProvider>
