@@ -77,10 +77,10 @@ const AdminDashboard: React.FC = () => {
     setLoading(true);
     try {
       const [statsRes, eventsRes, usersRes, purchasesRes] = await Promise.all([
-        api.get('/admin/stats'),
-        api.get('/admin/events'),
-        api.get('/admin/users'),
-        api.get('/admin/purchases'),
+        api.get('/stats'),
+        api.get('/events'),
+        api.get('/users'),
+        api.get('/purchases'),
       ]);
       setStats(statsRes.data);
       setEvents(eventsRes.data);
@@ -143,7 +143,7 @@ const AdminDashboard: React.FC = () => {
     if (!confirm('Da li ste sigurni da zelite da obrisete ovaj dogadjaj?')) return;
     
     try {
-      await api.delete(`/admin/events/${eventId}`);
+      await api.delete(`/events/${eventId}`);
       setEvents(events.filter(e => e.id !== eventId));
       showAlert({ type: 'success', text: 'Dogadjaj je obrisan.', show: true });
     } catch (error: any) {
@@ -155,7 +155,7 @@ const AdminDashboard: React.FC = () => {
     const newRole = currentRole === 'admin' ? 'user' : 'admin';
     
     try {
-      await api.put(`/admin/users/${userId}`, { role: newRole });
+      await api.put(`/users/${userId}`, { role: newRole });
       setUsers(users.map(u => u.id === userId ? { ...u, role: newRole as 'user' | 'admin' } : u));
       showAlert({ type: 'success', text: 'Uloga je promenjena.', show: true });
     } catch (error: any) {

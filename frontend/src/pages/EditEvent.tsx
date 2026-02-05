@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import { api } from '../services/api';
@@ -7,21 +7,27 @@ import Master from '../components/layout/Master';
 import Section from '../components/section/Section';
 
 interface TicketTypeForm {
+  id?: number;
   name: string;
   category: string;
   price: string;
   quantity_total: string;
+  quantity_sold: number;
   sales_start_at: string;
   sales_end_at: string;
   is_active: boolean;
+  isNew?: boolean;
+  isDeleted?: boolean;
 }
 
-const CreateEvent: React.FC = () => {
+const EditEvent: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated, isAdmin } = useAuth();
   const { showAlert } = useAlert();
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [eventData, setEventData] = useState({
     title: '',
     slug: '',
@@ -32,23 +38,70 @@ const CreateEvent: React.FC = () => {
     end_at: '',
   });
 
-  const [ticketTypes, setTicketTypes] = useState<TicketTypeForm[]>([
-    {
-      name: '',
-      category: '',
-      price: '',
-      quantity_total: '',
-      sales_start_at: '',
-      sales_end_at: '',
-      is_active: true,
-    },
-  ]);
+  const [ticketTypes, setTicketTypes] = useState<TicketTypeForm[]>([]);
 
-  // Redirect if not admin
-  if (!isAuthenticated || !isAdmin) {
-    navigate('/');
-    return null;
-  }
+  useEffect(() => {
+    if (!isAuthenticated || !isAdmin) {
+      showAlert({
+        type: 'error',
+        text: 'Nemate pristup ovoj stranici.',
+        show: true,
+      });
+      navigate('/');
+      return;
+    }
+    fetchEvent();
+  }, [id, isAuthenticated, isAdmin]);
+
+  const fetchEvent = async () => {
+    try {
+      // Uses public endpoint to get event with ticket types
+      const response = await api.get(`/events/${id}`);
+      const event = response.data;
+
+      // Format datetime for input fields
+      const formatDateTimeLocal = (dateString: string | null) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toISOString().slice(0, 16);
+      };
+
+      setEventData({
+        title: event.title || '',
+        slug: event.slug || '',
+        description: event.description || '',
+        venue: event.venue || '',
+        city: event.city || '',
+        start_at: formatDateTimeLocal(event.start_at),
+        end_at: formatDateTimeLocal(event.end_at),
+      });
+
+      setTicketTypes(
+        event.ticket_types.map((ticket: any) => ({
+          id: ticket.id,
+          name: ticket.name || '',
+          category: ticket.category || '',
+          price: ticket.price?.toString() || '',
+          quantity_total: ticket.quantity_total?.toString() || '',
+          quantity_sold: ticket.quantity_sold || 0,
+          sales_start_at: formatDateTimeLocal(ticket.sales_start_at),
+          sales_end_at: formatDateTimeLocal(ticket.sales_end_at),
+          is_active: ticket.is_active ?? true,
+          isNew: false,
+          isDeleted: false,
+        }))
+      );
+    } catch (error: any) {
+      showAlert({
+        type: 'error',
+        text: 'Greska pri ucitavanju dogadjaja.',
+        show: true,
+      });
+      navigate('/admin/dashboard');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const generateSlug = (title: string) => {
     return title
@@ -64,7 +117,6 @@ const CreateEvent: React.FC = () => {
     setEventData(prev => ({
       ...prev,
       [name]: value,
-      ...(name === 'title' ? { slug: generateSlug(value) } : {}),
     }));
   };
 
@@ -91,19 +143,51 @@ const CreateEvent: React.FC = () => {
         category: '',
         price: '',
         quantity_total: '',
+        quantity_sold: 0,
         sales_start_at: '',
         sales_end_at: '',
         is_active: true,
+        isNew: true,
+        isDeleted: false,
       },
     ]);
   };
 
   const removeTicketType = (index: number) => {
-    if (ticketTypes.length === 1) {
-      showAlert({ type: 'warning', text: 'Morate imati bar jedan tip karte.', show: true });
+    const ticket = ticketTypes[index];
+    
+    // If it's a new ticket (not saved yet), just remove it
+    if (ticket.isNew) {
+      setTicketTypes(prev => prev.filter((_, i) => i !== index));
       return;
     }
-    setTicketTypes(prev => prev.filter((_, i) => i !== index));
+
+    // If ticket has sold items, can't delete
+    if (ticket.quantity_sold > 0) {
+      showAlert({
+        type: 'error',
+        text: 'Ne mozete obrisati tip karte koji ima prodatih karata.',
+        show: true,
+      });
+      return;
+    }
+
+    // Mark as deleted
+    setTicketTypes(prev => prev.map((t, i) => {
+      if (i === index) {
+        return { ...t, isDeleted: true };
+      }
+      return t;
+    }));
+  };
+
+  const restoreTicketType = (index: number) => {
+    setTicketTypes(prev => prev.map((t, i) => {
+      if (i === index) {
+        return { ...t, isDeleted: false };
+      }
+      return t;
+    }));
   };
 
   const validateForm = () => {
@@ -120,18 +204,33 @@ const CreateEvent: React.FC = () => {
       return false;
     }
 
-    for (let i = 0; i < ticketTypes.length; i++) {
-      const ticket = ticketTypes[i];
+    const activeTickets = ticketTypes.filter(t => !t.isDeleted);
+    if (activeTickets.length === 0) {
+      showAlert({ type: 'error', text: 'Morate imati bar jedan tip karte.', show: true });
+      return false;
+    }
+
+    for (let i = 0; i < activeTickets.length; i++) {
+      const ticket = activeTickets[i];
       if (!ticket.name.trim()) {
-        showAlert({ type: 'error', text: `Unesite naziv za tip karte ${i + 1}.`, show: true });
+        showAlert({ type: 'error', text: `Unesite naziv za tip karte.`, show: true });
         return false;
       }
       if (!ticket.price || parseFloat(ticket.price) < 0) {
-        showAlert({ type: 'error', text: `Unesite validnu cenu za tip karte ${i + 1}.`, show: true });
+        showAlert({ type: 'error', text: `Unesite validnu cenu za tip karte "${ticket.name}".`, show: true });
         return false;
       }
       if (!ticket.quantity_total || parseInt(ticket.quantity_total) < 1) {
-        showAlert({ type: 'error', text: `Unesite validnu kolicinu za tip karte ${i + 1}.`, show: true });
+        showAlert({ type: 'error', text: `Unesite validnu kolicinu za tip karte "${ticket.name}".`, show: true });
+        return false;
+      }
+      // Check if quantity_total is less than quantity_sold
+      if (parseInt(ticket.quantity_total) < ticket.quantity_sold) {
+        showAlert({ 
+          type: 'error', 
+          text: `Ukupna kolicina za "${ticket.name}" ne moze biti manja od prodatih (${ticket.quantity_sold}).`, 
+          show: true 
+        });
         return false;
       }
     }
@@ -144,11 +243,11 @@ const CreateEvent: React.FC = () => {
 
     if (!validateForm()) return;
 
-    setLoading(true);
+    setSaving(true);
 
     try {
-      // 1. Create the event
-      const eventResponse = await api.post('/events', {
+      // 1. Update event data
+      await api.put(`/events/${id}`, {
         title: eventData.title,
         slug: eventData.slug,
         description: eventData.description,
@@ -158,24 +257,39 @@ const CreateEvent: React.FC = () => {
         end_at: eventData.end_at,
       });
 
-      const eventId = eventResponse.data.id;
-
-      // 2. Create ticket types for the event
+      // 2. Handle ticket types
       for (const ticket of ticketTypes) {
-        await api.post(`/events/${eventId}/ticket-types`, {
-          name: ticket.name,
-          category: ticket.category || null,
-          price: parseFloat(ticket.price),
-          quantity_total: parseInt(ticket.quantity_total),
-          sales_start_at: ticket.sales_start_at || null,
-          sales_end_at: ticket.sales_end_at || null,
-          is_active: ticket.is_active,
-        });
+        if (ticket.isDeleted && ticket.id) {
+          // Delete ticket type
+          await api.delete(`/ticket-types/${ticket.id}`);
+        } else if (ticket.isNew && !ticket.isDeleted) {
+          // Create new ticket type
+          await api.post(`/events/${id}/ticket-types`, {
+            name: ticket.name,
+            category: ticket.category || null,
+            price: parseFloat(ticket.price),
+            quantity_total: parseInt(ticket.quantity_total),
+            sales_start_at: ticket.sales_start_at || null,
+            sales_end_at: ticket.sales_end_at || null,
+            is_active: ticket.is_active,
+          });
+        } else if (!ticket.isNew && !ticket.isDeleted && ticket.id) {
+          // Update existing ticket type
+          await api.put(`/ticket-types/${ticket.id}`, {
+            name: ticket.name,
+            category: ticket.category || null,
+            price: parseFloat(ticket.price),
+            quantity_total: parseInt(ticket.quantity_total),
+            sales_start_at: ticket.sales_start_at || null,
+            sales_end_at: ticket.sales_end_at || null,
+            is_active: ticket.is_active,
+          });
+        }
       }
 
       showAlert({
         type: 'success',
-        text: 'Dogadjaj je uspesno kreiran!',
+        text: 'Dogadjaj je uspesno azuriran!',
         show: true,
       });
 
@@ -183,13 +297,33 @@ const CreateEvent: React.FC = () => {
     } catch (error: any) {
       showAlert({
         type: 'error',
-        text: error.response?.data?.message || 'Greska pri kreiranju dogadjaja.',
+        text: error.response?.data?.message || 'Greska pri azuriranju dogadjaja.',
         show: true,
       });
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (!isAuthenticated || !isAdmin) {
+    return null;
+  }
+
+  if (loading) {
+    return (
+      <Master>
+        <Section className="container mx-auto px-4 py-12">
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <p className="text-gray-500 mt-4">Ucitavanje dogadjaja...</p>
+          </div>
+        </Section>
+      </Master>
+    );
+  }
+
+  const activeTicketTypes = ticketTypes.filter(t => !t.isDeleted);
+  const deletedTicketTypes = ticketTypes.filter(t => t.isDeleted);
 
   return (
     <Master>
@@ -205,8 +339,8 @@ const CreateEvent: React.FC = () => {
             </svg>
             Nazad na dashboard
           </Link>
-          <h1 className="text-3xl font-bold text-gray-800">Kreiraj novi dogadjaj</h1>
-          <p className="text-gray-600 mt-1">Popunite informacije o dogadjaju i tipovima karata</p>
+          <h1 className="text-3xl font-bold text-gray-800">Izmeni dogadjaj</h1>
+          <p className="text-gray-600 mt-1">Azurirajte informacije o dogadjaju i tipovima karata</p>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -376,126 +510,162 @@ const CreateEvent: React.FC = () => {
                 </div>
 
                 <div className="space-y-6">
-                  {ticketTypes.map((ticket, index) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4 relative">
-                      {ticketTypes.length > 1 && (
+                  {activeTicketTypes.map((ticket, index) => {
+                    const originalIndex = ticketTypes.findIndex(t => t === ticket);
+                    return (
+                      <div key={originalIndex} className="border border-gray-200 rounded-lg p-4 relative">
                         <button
                           type="button"
-                          onClick={() => removeTicketType(index)}
+                          onClick={() => removeTicketType(originalIndex)}
                           className="absolute top-2 right-2 p-1 text-red-500 hover:bg-red-50 rounded"
+                          title={ticket.quantity_sold > 0 ? 'Ne moze se obrisati - ima prodatih karata' : 'Obrisi'}
                         >
                           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
                         </button>
-                      )}
 
-                      <p className="text-sm font-medium text-gray-500 mb-4">Tip karte #{index + 1}</p>
-
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Naziv *
-                          </label>
-                          <input
-                            type="text"
-                            name="name"
-                            value={ticket.name}
-                            onChange={(e) => handleTicketChange(index, e)}
-                            placeholder="npr. VIP, Standard"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                            required
-                          />
+                        <div className="flex items-center gap-2 mb-4">
+                          <p className="text-sm font-medium text-gray-500">
+                            {ticket.isNew ? 'Novi tip karte' : `Tip karte #${ticket.id}`}
+                          </p>
+                          {ticket.quantity_sold > 0 && (
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                              Prodato: {ticket.quantity_sold}
+                            </span>
+                          )}
                         </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Kategorija
-                          </label>
-                          <input
-                            type="text"
-                            name="category"
-                            value={ticket.category}
-                            onChange={(e) => handleTicketChange(index, e)}
-                            placeholder="npr. Premium, Economy"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                          />
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Naziv *
+                            </label>
+                            <input
+                              type="text"
+                              name="name"
+                              value={ticket.name}
+                              onChange={(e) => handleTicketChange(originalIndex, e)}
+                              placeholder="npr. VIP, Standard"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                              required
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Kategorija
+                            </label>
+                            <input
+                              type="text"
+                              name="category"
+                              value={ticket.category}
+                              onChange={(e) => handleTicketChange(originalIndex, e)}
+                              placeholder="npr. Premium, Economy"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Cena (RSD) *
+                            </label>
+                            <input
+                              type="number"
+                              name="price"
+                              value={ticket.price}
+                              onChange={(e) => handleTicketChange(originalIndex, e)}
+                              placeholder="0.00"
+                              min="0"
+                              step="0.01"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                              required
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Ukupna kolicina *
+                              {ticket.quantity_sold > 0 && (
+                                <span className="text-gray-400 font-normal"> (min: {ticket.quantity_sold})</span>
+                              )}
+                            </label>
+                            <input
+                              type="number"
+                              name="quantity_total"
+                              value={ticket.quantity_total}
+                              onChange={(e) => handleTicketChange(originalIndex, e)}
+                              placeholder="100"
+                              min={ticket.quantity_sold || 1}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                              required
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Pocetak prodaje
+                            </label>
+                            <input
+                              type="datetime-local"
+                              name="sales_start_at"
+                              value={ticket.sales_start_at}
+                              onChange={(e) => handleTicketChange(originalIndex, e)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Kraj prodaje
+                            </label>
+                            <input
+                              type="datetime-local"
+                              name="sales_end_at"
+                              value={ticket.sales_end_at}
+                              onChange={(e) => handleTicketChange(originalIndex, e)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                            />
+                          </div>
                         </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Cena (RSD) *
+                        <div className="mt-4">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              name="is_active"
+                              checked={ticket.is_active}
+                              onChange={(e) => handleTicketChange(originalIndex, e)}
+                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            />
+                            <span className="text-sm text-gray-700">Aktivan (dostupan za prodaju)</span>
                           </label>
-                          <input
-                            type="number"
-                            name="price"
-                            value={ticket.price}
-                            onChange={(e) => handleTicketChange(index, e)}
-                            placeholder="0.00"
-                            min="0"
-                            step="0.01"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                            required
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Ukupna kolicina *
-                          </label>
-                          <input
-                            type="number"
-                            name="quantity_total"
-                            value={ticket.quantity_total}
-                            onChange={(e) => handleTicketChange(index, e)}
-                            placeholder="100"
-                            min="1"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                            required
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Pocetak prodaje
-                          </label>
-                          <input
-                            type="datetime-local"
-                            name="sales_start_at"
-                            value={ticket.sales_start_at}
-                            onChange={(e) => handleTicketChange(index, e)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Kraj prodaje
-                          </label>
-                          <input
-                            type="datetime-local"
-                            name="sales_end_at"
-                            value={ticket.sales_end_at}
-                            onChange={(e) => handleTicketChange(index, e)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                          />
                         </div>
                       </div>
+                    );
+                  })}
 
-                      <div className="mt-4">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            name="is_active"
-                            checked={ticket.is_active}
-                            onChange={(e) => handleTicketChange(index, e)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                          />
-                          <span className="text-sm text-gray-700">Aktivan (dostupan za prodaju)</span>
-                        </label>
-                      </div>
+                  {/* Deleted Ticket Types */}
+                  {deletedTicketTypes.length > 0 && (
+                    <div className="border-t pt-4">
+                      <p className="text-sm font-medium text-red-600 mb-3">Obrisani tipovi karata (bice uklonjeni pri cuvanju):</p>
+                      {deletedTicketTypes.map((ticket) => {
+                        const originalIndex = ticketTypes.findIndex(t => t === ticket);
+                        return (
+                          <div key={originalIndex} className="flex items-center justify-between bg-red-50 border border-red-200 rounded-lg p-3 mb-2">
+                            <span className="text-red-700">{ticket.name} - {ticket.price} RSD</span>
+                            <button
+                              type="button"
+                              onClick={() => restoreTicketType(originalIndex)}
+                              className="text-sm text-blue-600 hover:underline"
+                            >
+                              Vrati
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </div>
@@ -526,12 +696,18 @@ const CreateEvent: React.FC = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Tipovi karata:</span>
-                    <span className="font-medium text-gray-800">{ticketTypes.length}</span>
+                    <span className="font-medium text-gray-800">{activeTicketTypes.length}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Ukupno karata:</span>
                     <span className="font-medium text-gray-800">
-                      {ticketTypes.reduce((sum, t) => sum + (parseInt(t.quantity_total) || 0), 0)}
+                      {activeTicketTypes.reduce((sum, t) => sum + (parseInt(t.quantity_total) || 0), 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Prodato:</span>
+                    <span className="font-medium text-green-600">
+                      {activeTicketTypes.reduce((sum, t) => sum + (t.quantity_sold || 0), 0)}
                     </span>
                   </div>
                 </div>
@@ -540,20 +716,20 @@ const CreateEvent: React.FC = () => {
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={saving}
                   style={{ color: 'white' }}
                   className="w-full bg-blue-600 py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                  {loading ? (
+                  {saving ? (
                     <span className="flex items-center justify-center gap-2">
                       <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                       </svg>
-                      Kreiranje...
+                      Cuvanje...
                     </span>
                   ) : (
-                    'Kreiraj dogadjaj'
+                    'Sacuvaj izmene'
                   )}
                 </button>
 
@@ -564,6 +740,13 @@ const CreateEvent: React.FC = () => {
                 >
                   Odustani
                 </button>
+
+                <Link
+                  to={`/events/${id}`}
+                  className="block w-full mt-3 py-3 text-center text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition"
+                >
+                  Pregledaj stranicu dogadjaja
+                </Link>
               </div>
             </div>
           </div>
@@ -573,4 +756,4 @@ const CreateEvent: React.FC = () => {
   );
 };
 
-export default CreateEvent;
+export default EditEvent;
