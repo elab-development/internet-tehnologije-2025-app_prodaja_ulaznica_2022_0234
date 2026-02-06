@@ -1,8 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './providers/AuthProvider';
 import { AlertProvider } from './providers/AlertProvider';
-import Alert from './components/alert/Alert';
-import ProtectedRoute from './components/common/ProtectedRoute';
+import Alert from './Components/alert/Alert';
+import ProtectedRoute from './Components/common/ProtectedRoute';
 
 import HomePage from './pages/HomePage';
 import Login from './pages/Login';
@@ -17,7 +17,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import CreateEvent from './pages/CreateEvent';
 import EditEvent from './pages/EditEvent';
 import MyTickets from './pages/MyTickets';
-import PaymentSuccess from './pages/PaymentSuccess';
+
 
 function App() {
   return (
@@ -67,14 +67,7 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-            <Route 
-             path="/payment/success/:purchaseId" 
-             element={
-              <ProtectedRoute>
-                  <PaymentSuccess />
-               </ProtectedRoute>
-               } 
-            />
+            
 
             {/* Protected admin routes */}
             <Route 

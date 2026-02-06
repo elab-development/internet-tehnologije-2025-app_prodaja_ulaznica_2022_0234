@@ -197,7 +197,7 @@ const Checkout: React.FC = () => {
         show: true,
       });
 
-      navigate(`/payment/success/${purchaseId}`);
+      navigate('/account');
     } catch (error: any) {
       showAlert({
         type: 'error',
