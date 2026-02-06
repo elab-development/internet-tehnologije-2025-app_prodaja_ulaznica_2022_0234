@@ -17,6 +17,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import CreateEvent from './pages/CreateEvent';
 import EditEvent from './pages/EditEvent';
 import MyTickets from './pages/MyTickets';
+import PaymentSuccess from './pages/PaymentSuccess';
 
 function App() {
   return (
@@ -65,6 +66,14 @@ function App() {
                   <Checkout />
                 </ProtectedRoute>
               } 
+            />
+            <Route 
+             path="/payment/success/:purchaseId" 
+             element={
+              <ProtectedRoute>
+                  <PaymentSuccess />
+               </ProtectedRoute>
+               } 
             />
 
             {/* Protected admin routes */}
