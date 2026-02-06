@@ -18,8 +18,18 @@ import CreateEvent from './pages/CreateEvent';
 import EditEvent from './pages/EditEvent';
 import MyTickets from './pages/MyTickets';
 
+import axios from "axios";
+import { useEffect } from "react";
+
 
 function App() {
+
+  useEffect(() => {
+    axios.get("http://127.0.0.1:8000/api/test")
+      .then(res => console.log(res.data))
+      .catch(err => console.log(err));
+  }, []);
+  
   return (
     <Router>
       <AuthProvider>
