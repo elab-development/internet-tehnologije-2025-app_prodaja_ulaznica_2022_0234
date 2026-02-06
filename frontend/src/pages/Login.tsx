@@ -56,14 +56,14 @@ const Login: React.FC = () => {
     <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Welcome Back</h1>
-          <p className="text-gray-600 mt-2">Sign in to your account</p>
+          <h1 className="text-3xl font-bold text-gray-800">Dobro došli nazad!</h1>
+          <p className="text-gray-600 mt-2">Prijavite se na svoj nalog</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
+              Email Adresa
             </label>
             <Input
               name="email"
@@ -72,13 +72,13 @@ const Login: React.FC = () => {
               onChange={handleChange}
               required
               maxLength={100}
-              placeholder="your@email.com"
+              placeholder="vasa@emailadresa.com"
             />
           </div>
 
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-              Password
+              Lozinka
             </label>
             <Input
               name="password"
@@ -99,11 +99,11 @@ const Login: React.FC = () => {
                 className="h-4 w-4 text-blue-600 border-gray-300 rounded"
               />
               <label htmlFor="remember" className="ml-2 text-sm text-gray-600">
-                Remember me
+                Zapamti me
               </label>
             </div>
             <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline">
-              Forgot password?
+              Zaboravili ste lozinku?
             </Link>
           </div>
 
@@ -112,15 +112,15 @@ const Login: React.FC = () => {
             disabled={loading}
             className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Prijavljivanje...' : 'Prijavite se'}
           </button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-gray-600">
-            Don't have an account?{' '}
+            Nemate nalog?{' '}
             <Link to="/register" className="text-blue-600 font-semibold hover:underline">
-              Sign up
+              Registrujte se
             </Link>
           </p>
         </div>

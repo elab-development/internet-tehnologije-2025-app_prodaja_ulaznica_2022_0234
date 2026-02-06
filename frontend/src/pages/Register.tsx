@@ -59,14 +59,14 @@ const Register: React.FC = () => {
     <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Create Account</h1>
-          <p className="text-gray-600 mt-2">Sign up to get started</p>
+          <h1 className="text-3xl font-bold text-gray-800">Kreirajte Nalog</h1>
+          <p className="text-gray-600 mt-2">Registrujte se za početak</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-              Full Name
+              Ime i Prezime
             </label>
             <Input
               name="name"
@@ -75,13 +75,13 @@ const Register: React.FC = () => {
               onChange={handleChange}
               required
               maxLength={100}
-              placeholder="John Doe"
+              placeholder="Pera Perić"
             />
           </div>
 
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
+              Email Adresa
             </label>
             <Input
               name="email"
@@ -90,13 +90,13 @@ const Register: React.FC = () => {
               onChange={handleChange}
               required
               maxLength={100}
-              placeholder="your@email.com"
+              placeholder="vasa@emailadresa.com"
             />
           </div>
 
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-              Password
+              Lozinka
             </label>
             <Input
               name="password"
@@ -111,7 +111,7 @@ const Register: React.FC = () => {
 
           <div>
             <label htmlFor="password_confirmation" className="block text-sm font-medium text-gray-700 mb-2">
-              Confirm Password
+              Potvrdite Lozinku
             </label>
             <Input
               name="password_confirmation"
@@ -135,9 +135,9 @@ const Register: React.FC = () => {
 
         <div className="mt-6 text-center">
           <p className="text-gray-600">
-            Already have an account?{' '}
+            Već imate nalog?{' '}
             <Link to="/login" className="text-blue-600 font-semibold hover:underline">
-              Sign in
+              Prijavite se
             </Link>
           </p>
         </div>

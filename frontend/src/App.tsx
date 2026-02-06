@@ -11,6 +11,7 @@ import Help from './pages/Help';
 import ContactUs from './pages/ContactUs';
 import MyAccount from './pages/MyAccount';
 import EventDetail from './pages/EventDetail';
+import Queue from './pages/Queue';  
 import Checkout from './pages/Checkout';
 import AdminDashboard from './pages/AdminDashboard';
 import CreateEvent from './pages/CreateEvent';
@@ -46,6 +47,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <MyTickets />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/events/:eventId/queue" 
+              element={
+                <ProtectedRoute>
+                  <Queue />
                 </ProtectedRoute>
               } 
             />
@@ -89,6 +98,5 @@ function App() {
     </Router>
   );
 }
-
 
 export default App;
