@@ -1,7 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './providers/AuthProvider';
 import { AlertProvider } from './providers/AlertProvider';
-import Alert from './Components/alert/Alert';
+import Alert from './components/alert/Alert';
+import ProtectedRoute from './components/common/ProtectedRoute';
 
 import HomePage from './pages/HomePage';
 import Login from './pages/Login';
@@ -14,7 +15,7 @@ import Checkout from './pages/Checkout';
 import AdminDashboard from './pages/AdminDashboard';
 import CreateEvent from './pages/CreateEvent';
 import EditEvent from './pages/EditEvent';
-
+import MyTickets from './pages/MyTickets';
 
 function App() {
   return (
@@ -23,24 +24,71 @@ function App() {
         <AlertProvider>
           <Alert />
           <Routes>
+            {/* Public routes */}
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/help" element={<Help />} />
             <Route path="/contact" element={<ContactUs />} />
-            <Route path="/account" element={<MyAccount />} />
             <Route path="/events/:id" element={<EventDetail />} />
-            <Route path="/checkout/:purchaseId" element={<Checkout />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/admin/events/create" element={<CreateEvent />} />
-            <Route path="/admin/events/:id/edit" element={<EditEvent />} />
-           
 
+            {/* Protected user routes */}
+            <Route 
+              path="/account" 
+              element={
+                <ProtectedRoute>
+                  <MyAccount />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/tickets" 
+              element={
+                <ProtectedRoute>
+                  <MyTickets />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/checkout/:purchaseId" 
+              element={
+                <ProtectedRoute>
+                  <Checkout />
+                </ProtectedRoute>
+              } 
+            />
+
+            {/* Protected admin routes */}
+            <Route 
+              path="/admin/dashboard" 
+              element={
+                <ProtectedRoute adminOnly>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/events/create" 
+              element={
+                <ProtectedRoute adminOnly>
+                  <CreateEvent />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/events/:id/edit" 
+              element={
+                <ProtectedRoute adminOnly>
+                  <EditEvent />
+                </ProtectedRoute>
+              } 
+            />
           </Routes>
         </AlertProvider>
       </AuthProvider>
     </Router>
   );
 }
+
 
 export default App;
