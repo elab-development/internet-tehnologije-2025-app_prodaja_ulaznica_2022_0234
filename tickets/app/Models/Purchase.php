@@ -27,7 +27,6 @@ class Purchase extends Model
         'reserved_until' => 'datetime',
     ];
 
-
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -41,5 +40,15 @@ class Purchase extends Model
     public function ticketType()
     {
         return $this->belongsTo(TicketType::class);
+    }
+
+    public function tickets()
+    {
+        return $this->hasMany(Ticket::class);
+    }
+
+    public function payment()
+    {
+        return $this->hasOne(Payment::class);
     }
 }

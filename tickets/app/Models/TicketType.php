@@ -30,7 +30,6 @@ class TicketType extends Model
         'is_active'      => 'boolean',
     ];
 
-
     public function event()
     {
         return $this->belongsTo(Event::class);
@@ -39,5 +38,10 @@ class TicketType extends Model
     public function purchases()
     {
         return $this->hasMany(Purchase::class);
+    }
+
+    public function tickets()
+    {
+        return $this->hasMany(Ticket::class);
     }
 }

@@ -13,6 +13,7 @@ class Event extends Model
         'title',
         'slug',
         'description',
+        'venue_id',
         'venue',
         'city',
         'start_at',
@@ -23,6 +24,11 @@ class Event extends Model
         'start_at' => 'datetime',
         'end_at'   => 'datetime',
     ];
+
+    public function venue()
+    {
+        return $this->belongsTo(Venue::class);
+    }
 
     public function ticketTypes()
     {
