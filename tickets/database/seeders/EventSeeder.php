@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Event;
+use App\Models\Venue;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 
@@ -39,13 +40,17 @@ class EventSeeder extends Seeder
         ];
 
         foreach ($events as $data) {
+            $slug = Str::slug($data['title']);
+            $venue = Venue::where('name', $data['venue'])->first();
+
             Event::updateOrCreate(
-                ['slug' => Str::slug($data['title'])],
+                ['slug' => $slug],
                 [
                     'title'       => $data['title'],
-                    'slug'        => Str::slug($data['title']),
+                    'slug'        => $slug,
                     'description' => $data['description'],
                     'venue'       => $data['venue'],
+                    'venue_id'    => $venue ? $venue->id : null,
                     'city'        => $data['city'],
                     'start_at'    => $data['start_at'],
                     'end_at'      => $data['end_at'],

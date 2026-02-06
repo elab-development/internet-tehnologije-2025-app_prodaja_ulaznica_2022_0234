@@ -7,6 +7,9 @@ use App\Models\User;
 use App\Models\Event;
 use App\Models\TicketType;
 use App\Models\Purchase;
+use App\Models\Ticket;
+use App\Models\Seat;
+use App\Models\Payment;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -20,13 +23,57 @@ class PurchaseSeeder extends Seeder
 
         $events = Event::all()->keyBy('slug');
 
-        $createPaid = function (User $user, TicketType $tt, int $qty) {
+        $allocateSeatsAndCreateTickets = function (Purchase $purchase, TicketType $tt, int $qty, string $ticketStatus) {
+            // attempt to allocate seats from venue
+            $seatIds = [];
+            $event = $tt->event()->first();
+            if ($event && $event->venue_id) {
+                $availableSeats = Seat::where('venue_id', $event->venue_id)
+                    ->where('status', 'available')
+                    ->limit($qty)
+                    ->get();
+
+                foreach ($availableSeats as $s) {
+                    // create ticket
+                    Ticket::create([
+                        'purchase_id'   => $purchase->id,
+                        'seat_id'       => $s->id,
+                        'ticket_type_id'=> $tt->id,
+                        'status'        => $ticketStatus,
+                        'price'         => $s->price ?? $tt->price,
+                        'qr_code'       => null,
+                        'ticket_number' => null,
+                    ]);
+
+                    // update seat status
+                    $s->update(['status' => $ticketStatus === 'sold' ? 'sold' : 'reserved']);
+
+                    $seatIds[] = $s->id;
+                }
+            } else {
+                // no venue / seats - create ticket records without seats
+                for ($i = 0; $i < $qty; $i++) {
+                    Ticket::create([
+                        'purchase_id'   => $purchase->id,
+                        'seat_id'       => null,
+                        'ticket_type_id'=> $tt->id,
+                        'status'        => $ticketStatus,
+                        'price'         => $tt->price,
+                        'qr_code'       => null,
+                        'ticket_number' => null,
+                    ]);
+                }
+            }
+
+            return $seatIds;
+        };
+
+        $createPaid = function (User $user, TicketType $tt, int $qty) use ($allocateSeatsAndCreateTickets) {
             $unit = $tt->price;
             $total = $unit * $qty;
 
-            // u transakciji zbog usklađivanja sold
-            DB::transaction(function () use ($user, $tt, $qty, $unit, $total) {
-                Purchase::create([
+            DB::transaction(function () use ($user, $tt, $qty, $unit, $total, $allocateSeatsAndCreateTickets) {
+                $purchase = Purchase::create([
                     'user_id'        => $user->id,
                     'event_id'       => $tt->event_id,
                     'ticket_type_id' => $tt->id,
@@ -37,25 +84,43 @@ class PurchaseSeeder extends Seeder
                     'reserved_until' => null,
                 ]);
 
-                // uvećaj sold
+                // increment sold counter
                 $tt->increment('quantity_sold', $qty);
+
+                // allocate seats and create tickets (mark sold)
+                $allocateSeatsAndCreateTickets($purchase, $tt, $qty, 'sold');
+
+                // create a payment record
+                Payment::create([
+                    'purchase_id'    => $purchase->id,
+                    'amount'         => $total,
+                    'status'         => 'completed',
+                    'payment_method' => 'card',
+                    'transaction_id' => strtoupper(\Illuminate\Support\Str::random(12)),
+                    'response_data'  => null,
+                ]);
             });
         };
 
-        $createPending = function (User $user, TicketType $tt, int $qty, int $ttlMinutes = 10) {
+        $createPending = function (User $user, TicketType $tt, int $qty, int $ttlMinutes = 10) use ($allocateSeatsAndCreateTickets) {
             $unit = $tt->price;
             $total = $unit * $qty;
 
-            Purchase::create([
-                'user_id'        => $user->id,
-                'event_id'       => $tt->event_id,
-                'ticket_type_id' => $tt->id,
-                'quantity'       => $qty,
-                'unit_price'     => $unit,
-                'total_amount'   => $total,
-                'status'         => 'pending',
-                'reserved_until' => Carbon::now()->addMinutes($ttlMinutes),
-            ]);
+            DB::transaction(function () use ($user, $tt, $qty, $unit, $total, $ttlMinutes, $allocateSeatsAndCreateTickets) {
+                $purchase = Purchase::create([
+                    'user_id'        => $user->id,
+                    'event_id'       => $tt->event_id,
+                    'ticket_type_id' => $tt->id,
+                    'quantity'       => $qty,
+                    'unit_price'     => $unit,
+                    'total_amount'   => $total,
+                    'status'         => 'pending',
+                    'reserved_until' => Carbon::now()->addMinutes($ttlMinutes),
+                ]);
+
+                // reserve seats and create tickets with status 'reserved'
+                $allocateSeatsAndCreateTickets($purchase, $tt, $qty, 'reserved');
+            });
         };
 
         // --- primeri kupovina ---
@@ -104,16 +169,29 @@ class PurchaseSeeder extends Seeder
             if (rand(0, 1)) {
                 $createPending($u, $tt, rand(1, 2), 8);
             } else {
-                Purchase::create([
-                    'user_id'        => $u->id,
-                    'event_id'       => $tt->event_id,
-                    'ticket_type_id' => $tt->id,
-                    'quantity'       => 1,
-                    'unit_price'     => $tt->price,
-                    'total_amount'   => $tt->price,
-                    'status'         => 'expired',
-                    'reserved_until' => Carbon::now()->subMinutes(5),
-                ]);
+                DB::transaction(function () use ($u, $tt) {
+                    $purchase = Purchase::create([
+                        'user_id'        => $u->id,
+                        'event_id'       => $tt->event_id,
+                        'ticket_type_id' => $tt->id,
+                        'quantity'       => 1,
+                        'unit_price'     => $tt->price,
+                        'total_amount'   => $tt->price,
+                        'status'         => 'expired',
+                        'reserved_until' => Carbon::now()->subMinutes(5),
+                    ]);
+
+                    // optionally create an expired ticket (no seat allocation)
+                    Ticket::create([
+                        'purchase_id'   => $purchase->id,
+                        'seat_id'       => null,
+                        'ticket_type_id'=> $tt->id,
+                        'status'        => 'reserved',
+                        'price'         => $tt->price,
+                        'qr_code'       => null,
+                        'ticket_number' => null,
+                    ]);
+                });
             }
         }
     }

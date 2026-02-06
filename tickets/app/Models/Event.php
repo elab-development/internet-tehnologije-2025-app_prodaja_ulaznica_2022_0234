@@ -39,4 +39,16 @@ class Event extends Model
     {
         return $this->hasMany(Purchase::class);
     }
+
+    public function payment()
+    {
+        return $this->hasOne(Payment::class);
+    }
+
+    public function waitlistEntries()
+    {
+        return $this->hasMany(WaitlistEntry::class);
+    }
+    
 }
+

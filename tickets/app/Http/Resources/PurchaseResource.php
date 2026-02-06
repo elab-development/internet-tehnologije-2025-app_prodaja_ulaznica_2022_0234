@@ -21,9 +21,9 @@ class PurchaseResource extends JsonResource
             'total_amount'   => (float) $this->total_amount,
             'status'         => $this->status,
             'reserved_until' => optional($this->reserved_until)?->toISOString(),
-            'user'        => new UserResource($this->whenLoaded('user')),
-            'event'       => new EventResource($this->whenLoaded('event')),
-            'ticket_type' => new TicketTypeResource($this->whenLoaded('ticketType')),
+            'created_at'     => optional($this->created_at)?->toISOString(),
+            'tickets'        => TicketResource::collection($this->whenLoaded('tickets')),
+            'payment'        => new PaymentResource($this->whenLoaded('payment')),
         ];
     }
 }

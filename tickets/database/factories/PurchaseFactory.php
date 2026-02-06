@@ -60,4 +60,22 @@ class PurchaseFactory extends Factory
             return ['status' => 'cancelled', 'reserved_until' => null];
         });
     }
+
+    /**
+     * After creating a Purchase, optionally create Ticket records.
+     * Usage: Purchase::factory()->count(1)->withTickets()->create();
+     * By default creates $purchase->quantity tickets.
+     */
+    public function withTickets(int $count = null): static
+    {
+        return $this->afterCreating(function (Purchase $purchase) use ($count) {
+            $n = $count ?? $purchase->quantity;
+            \App\Models\Ticket::factory()->count($n)->create([
+                'purchase_id'   => $purchase->id,
+                'ticket_type_id'=> $purchase->ticket_type_id,
+                'price'         => $purchase->unit_price,
+                'status'        => 'reserved',
+            ]);
+        });
+    }
 }
