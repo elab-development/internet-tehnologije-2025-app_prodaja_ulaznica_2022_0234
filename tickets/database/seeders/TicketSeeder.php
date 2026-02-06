@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\Ticket;
 use App\Models\TicketType;
+use Illuminate\Support\Str;
 
 class TicketSeeder extends Seeder
 {
@@ -20,11 +21,28 @@ class TicketSeeder extends Seeder
                 continue;
             }
 
-            Ticket::factory()->count($needed)->create([
-                'ticket_type_id' => $type->id,
-                'price' => $type->price,
-                'status' => 'available',
-            ]);
+            // Kreiraj karte u chunks-ima od 500 da izbegneš memory issues
+            $chunks = array_chunk(range(1, $needed), 500);
+
+            foreach ($chunks as $chunk) {
+                $tickets = [];
+                foreach ($chunk as $i) {
+                    $tickets[] = [
+                        'purchase_id'    => null,
+                        'seat_id'        => null,
+                        'ticket_type_id' => $type->id,
+                        'status'         => 'available',
+                        'price'          => $type->price,
+                        'qr_code'        => null,
+                        'ticket_number'  => strtoupper(Str::random(10)) . '-' . uniqid(),
+                        'created_at'     => now(),
+                        'updated_at'     => now(),
+                    ];
+                }
+
+                // Bulk insert chunk
+                Ticket::insert($tickets);
+            }
         }
     }
 }

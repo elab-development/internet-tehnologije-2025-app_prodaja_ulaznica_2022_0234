@@ -13,16 +13,14 @@ class TicketFactory extends Factory
 
     public function definition(): array
     {
-        $tt = TicketType::factory()->create();
-
         return [
-            'purchase_id'   => null,
-            'seat_id'       => null,
-            'ticket_type_id'=> $tt->id,
-            'status'        => 'available',
-            'price'         => $tt->price,
-            'qr_code'       => null,
-            'ticket_number' => strtoupper(Str::random(10)),
+            'purchase_id'    => null,
+            'seat_id'        => null,
+            'ticket_type_id' => TicketType::factory(), // will be overridden by create(['ticket_type_id' => $id])
+            'status'         => 'available',
+            'price'          => $this->faker->randomFloat(2, 500, 10000),
+            'qr_code'        => null,
+            'ticket_number'  => strtoupper(Str::random(10)),
         ];
     }
 }
