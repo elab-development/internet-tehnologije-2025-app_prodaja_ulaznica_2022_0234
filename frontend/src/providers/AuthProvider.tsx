@@ -1,6 +1,7 @@
 import { useState, useEffect, ReactNode } from 'react';
-import { AuthContext, User } from '../contexts/authContext';
+import { AuthContext } from '../contexts/authContext';
 import { api } from '../services/api';
+import { User } from '../types';
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -19,9 +20,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (token && savedUser) {
         try {
           // Verify token is still valid
-          const response = await api.get('/me');
-          setUser(response.data);
-          localStorage.setItem('user', JSON.stringify(response.data));
+          const userResponse = await api.get('/user');
+          setUser(userResponse.data);
+          localStorage.setItem('user', JSON.stringify(userResponse.data));
         } catch (error) {
           // Token invalid, clear storage
           localStorage.removeItem('token');
@@ -38,10 +39,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string): Promise<void> => {
     setIsLoading(true);
     try {
-      const response = await api.post('/login', { email, password });
-      const { token, user: userData } = response.data;
+      const loginResponse = await api.post('/login', { email, password });
+      const { access_token } = loginResponse.data;
 
-      localStorage.setItem('token', token);
+      // Save token
+      localStorage.setItem('token', access_token);
+
+      // Fetch user data
+      const userResponse = await api.get('/user');
+      const userData = userResponse.data;
+      
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
     } finally {
