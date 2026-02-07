@@ -17,6 +17,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import CreateEvent from './pages/CreateEvent';
 import EditEvent from './pages/EditEvent';
 import MyTickets from './pages/MyTickets';
+import EventSearch from './pages/EventSearch';
 
 
 
@@ -38,6 +39,7 @@ function App() {
             <Route path="/help" element={<Help />} />
             <Route path="/contact" element={<ContactUs />} />
             <Route path="/events/:id" element={<EventDetail />} />
+            <Route path="/events/search" element={<EventSearch />} />
 
             {/* Protected user routes */}
             <Route 

@@ -4,7 +4,6 @@ import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import { api } from '../services/api';
 import Master from '../components/layout/Master';
-import Section from '../components/section/Section';
 
 interface TicketType {
   id: number;
@@ -31,10 +30,6 @@ interface Event {
   ticket_types: TicketType[];
 }
 
-interface SelectedTickets {
-  [ticketTypeId: number]: number;
-}
-
 const EventDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -43,18 +38,36 @@ const EventDetail: React.FC = () => {
 
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedTickets, setSelectedTickets] = useState<SelectedTickets>({});
-  const [purchasing, setPurchasing] = useState(false);
+  const [waitlistLoading, setWaitlistLoading] = useState(false);
+  const [waitlistEntry, setWaitlistEntry] = useState<any>(null);
+  const [queueSize, setQueueSize] = useState<number | null>(null);
+  const [reservation, setReservation] = useState<any>(null);
 
   useEffect(() => {
     fetchEvent();
   }, [id]);
 
+  // Re-fetch waitlist status when auth state changes (e.g. user logs in)
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchWaitlistStatus();
+    } else {
+      // clear waitlist info when not authenticated
+      setWaitlistEntry(null);
+      setQueueSize(null);
+      setReservation(null);
+    }
+  }, [isAuthenticated, id]);
+
   const fetchEvent = async () => {
     try {
       const response = await api.get(`/events/${id}`);
-      setEvent(response.data);
+      // Backend returns a wrapped resource: { event: { ... } }
+      console.log('API Response:', response.data);
+      const evt = response.data?.event ?? response.data;
+      setEvent(evt);
     } catch (error: any) {
+      console.error('API Error:', error);
       showAlert({
         type: 'error',
         text: 'Greska pri ucitavanju dogadjaja.',
@@ -91,106 +104,91 @@ const EventDetail: React.FC = () => {
   const isTicketAvailable = (ticketType: TicketType) => {
     if (!ticketType.is_active) return false;
     if (getAvailableQuantity(ticketType) <= 0) return false;
-    
+
     const now = new Date();
     if (ticketType.sales_start_at && new Date(ticketType.sales_start_at) > now) return false;
     if (ticketType.sales_end_at && new Date(ticketType.sales_end_at) < now) return false;
-    
+
     return true;
   };
 
-  const handleQuantityChange = (ticketTypeId: number, change: number) => {
-    const ticketType = event?.ticket_types.find(t => t.id === ticketTypeId);
-    if (!ticketType) return;
-
-    const currentQty = selectedTickets[ticketTypeId] || 0;
-    const newQty = currentQty + change;
-    const maxAvailable = getAvailableQuantity(ticketType);
-
-    if (newQty < 0 || newQty > Math.min(maxAvailable, 10)) return;
-
-    setSelectedTickets(prev => ({
-      ...prev,
-      [ticketTypeId]: newQty,
-    }));
+  const anyTicketsAvailable = () => {
+    if (!event || !event.ticket_types) return false;
+    return event.ticket_types.some(t => isTicketAvailable(t));
   };
 
-  const getTotalPrice = () => {
-    if (!event) return 0;
-    return event.ticket_types.reduce((total, ticketType) => {
-      const qty = selectedTickets[ticketType.id] || 0;
-      return total + (qty * parseFloat(ticketType.price));
-    }, 0);
+
+
+  const fetchWaitlistStatus = async () => {
+    if (!id) return;
+    setWaitlistLoading(true);
+    try {
+      const res = await api.get(`/events/${id}/waitlist/status`);
+      const entry = res.data.waitlist_entry ?? null;
+      if (entry && res.data.position) entry.position = res.data.position;
+      setWaitlistEntry(entry);
+      setQueueSize(res.data.queue_size ?? null);
+      setReservation(res.data.reservation ?? null);
+    } catch (err: any) {
+      // ignore if not joined or server returns 404/401
+      setWaitlistEntry(null);
+      setQueueSize(null);
+      setReservation(null);
+    } finally {
+      setWaitlistLoading(false);
+    }
   };
 
-  const getTotalTickets = () => {
-    return Object.values(selectedTickets).reduce((sum, qty) => sum + qty, 0);
-  };
-
-  const handlePurchase = async () => {
+  const joinWaitlist = async () => {
     if (!isAuthenticated) {
-      showAlert({
-        type: 'warning',
-        text: 'Morate biti prijavljeni da biste kupili karte.',
-        show: true,
-      });
+      showAlert({ type: 'warning', text: 'Morate biti prijavljeni da se pridruzite redu cekanja.', show: true });
       navigate('/login');
       return;
     }
 
-    if (getTotalTickets() === 0) {
-      showAlert({
-        type: 'warning',
-        text: 'Izaberite bar jednu kartu.',
-        show: true,
-      });
+    setWaitlistLoading(true);
+    try {
+      const res = await api.post(`/events/${id}/waitlist/join`);
+      const entry = res.data.waitlist_entry ?? null;
+      if (entry && res.data.position) entry.position = res.data.position;
+      setWaitlistEntry(entry);
+      setQueueSize(res.data.queue_size ?? null);
+      setReservation(res.data.reservation ?? null);
+      showAlert({ type: 'success', text: res.data.message || 'Pridruzili ste se redu cekanja.', show: true });
+    } catch (err: any) {
+      showAlert({ type: 'error', text: err.response?.data?.message || 'Greska pri pridruzivanju redu.', show: true });
+    } finally {
+      setWaitlistLoading(false);
+    }
+  };
+
+  const leaveWaitlist = async () => {
+    if (!isAuthenticated) {
       return;
     }
 
-    setPurchasing(true);
-
+    setWaitlistLoading(true);
     try {
-      // Create purchase for each selected ticket type
-      const purchases = Object.entries(selectedTickets)
-        .filter(([_, qty]) => qty > 0)
-        .map(([ticketTypeId, quantity]) => ({
-          ticket_type_id: parseInt(ticketTypeId),
-          quantity,
-        }));
-
-      const response = await api.post('/purchases', {
-        event_id: event?.id,
-        tickets: purchases,
-      });
-
-      showAlert({
-        type: 'success',
-        text: 'Uspesno ste rezervisali karte! Imate 15 minuta da zavrsite placanje.',
-        show: true,
-      });
-
-      // Navigate to checkout/payment page
-      navigate(`/checkout/${response.data.purchase_id}`);
-    } catch (error: any) {
-      showAlert({
-        type: 'error',
-        text: error.response?.data?.message || 'Greska pri kupovini karata.',
-        show: true,
-      });
+      const res = await api.delete(`/events/${id}/waitlist/leave`);
+      setWaitlistEntry(null);
+      setQueueSize(res.data.queue_size ?? null);
+      showAlert({ type: 'success', text: res.data.message || 'Napustili ste red cekanja.', show: true });
+    } catch (err: any) {
+      showAlert({ type: 'error', text: err.response?.data?.message || 'Greska pri napustanju reda.', show: true });
     } finally {
-      setPurchasing(false);
+      setWaitlistLoading(false);
     }
   };
 
   if (loading) {
     return (
       <Master>
-        <Section className="container mx-auto px-4 py-12">
+        <div className="container mx-auto px-4 py-12">
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             <p className="text-gray-500 mt-4">Ucitavanje dogadjaja...</p>
           </div>
-        </Section>
+        </div>
       </Master>
     );
   }
@@ -198,14 +196,14 @@ const EventDetail: React.FC = () => {
   if (!event) {
     return (
       <Master>
-        <Section className="container mx-auto px-4 py-12">
+        <div className="container mx-auto px-4 py-12">
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">Dogadjaj nije pronadjen.</p>
-            <Link to="/" style={{ color: 'white' }} className="inline-block mt-4 bg-blue-600 px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+            <Link to="/" className="inline-block mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
               Nazad na pocetnu
             </Link>
           </div>
-        </Section>
+        </div>
       </Master>
     );
   }
@@ -246,7 +244,8 @@ const EventDetail: React.FC = () => {
         </div>
       </div>
 
-      <Section className="container mx-auto px-4 py-12">
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-12">
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Event Details */}
           <div className="lg:col-span-2">
@@ -258,73 +257,33 @@ const EventDetail: React.FC = () => {
               </p>
             </div>
 
-            {/* Ticket Types */}
+            {/* Ticket Types - Info only (purchasing done through queue) */}
             <div className="bg-white rounded-xl shadow-md p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Izaberite karte</h2>
-              
-              {event.ticket_types.length === 0 ? (
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Dostupne karte</h2>
+              {!event.ticket_types || event.ticket_types.length === 0 ? (
                 <p className="text-gray-500">Nema dostupnih karata za ovaj dogadjaj.</p>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {event.ticket_types.map((ticketType) => {
                     const available = getAvailableQuantity(ticketType);
                     const isAvailable = isTicketAvailable(ticketType);
-                    const selectedQty = selectedTickets[ticketType.id] || 0;
 
                     return (
-                      <div
-                        key={ticketType.id}
-                        className={`border rounded-lg p-4 ${isAvailable ? 'border-gray-200' : 'border-gray-100 bg-gray-50'}`}
-                      >
-                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-semibold text-gray-800">{ticketType.name}</h3>
-                              {ticketType.category && (
-                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                                  {ticketType.category}
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-2xl font-bold text-blue-600 mt-1">
-                              {parseFloat(ticketType.price).toLocaleString('sr-RS')} RSD
-                            </p>
-                            <p className="text-sm text-gray-500 mt-1">
-                              {isAvailable ? (
-                                <>Dostupno: <span className="text-green-600 font-medium">{available}</span> karata</>
-                              ) : available <= 0 ? (
-                                <span className="text-red-600">Rasprodato</span>
-                              ) : (
-                                <span className="text-orange-600">Prodaja nije aktivna</span>
-                              )}
-                            </p>
-                          </div>
-
-                          {isAvailable && (
-                            <div className="flex items-center gap-3">
-                              <button
-                                onClick={() => handleQuantityChange(ticketType.id, -1)}
-                                disabled={selectedQty === 0}
-                                className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                              >
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                                </svg>
-                              </button>
-                              <span className="w-12 text-center text-xl font-semibold text-gray-800">
-                                {selectedQty}
-                              </span>
-                              <button
-                                onClick={() => handleQuantityChange(ticketType.id, 1)}
-                                disabled={selectedQty >= Math.min(available, 10)}
-                                className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                              >
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                </svg>
-                              </button>
-                            </div>
-                          )}
+                      <div key={ticketType.id} className="border rounded-lg p-3 flex justify-between items-center">
+                        <div>
+                          <h3 className="font-semibold text-gray-800">{ticketType.name}</h3>
+                          <p className="text-lg font-bold text-blue-600">
+                            {parseFloat(ticketType.price).toLocaleString('sr-RS')} RSD
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-gray-600">
+                            {isAvailable ? (
+                              <><span className="text-green-600 font-medium">{available}</span> dostupno</>
+                            ) : (
+                              <span className="text-red-600">Rasprodato</span>
+                            )}
+                          </p>
                         </div>
                       </div>
                     );
@@ -338,59 +297,55 @@ const EventDetail: React.FC = () => {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl shadow-md p-6 sticky top-4">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Vasa narudzbina</h2>
-              
-              {getTotalTickets() === 0 ? (
-                <p className="text-gray-500 text-center py-8">
-                  Izaberite karte za kupovinu
-                </p>
-              ) : (
-                <>
-                  <div className="space-y-3 mb-6">
-                    {event.ticket_types
-                      .filter(t => (selectedTickets[t.id] || 0) > 0)
-                      .map(ticketType => {
-                        const qty = selectedTickets[ticketType.id];
-                        const subtotal = qty * parseFloat(ticketType.price);
-                        return (
-                          <div key={ticketType.id} className="flex justify-between text-sm">
-                            <span className="text-gray-600">
-                              {ticketType.name} x {qty}
-                            </span>
-                            <span className="font-medium text-gray-800">
-                              {subtotal.toLocaleString('sr-RS')} RSD
-                            </span>
+
+              <div className="text-center py-6">
+                <p className="text-gray-600 mb-4">Pristupite redu čekanja da biste kupili karte.</p>
+                
+                {!isAuthenticated ? (
+                  <Link
+                    to={`/login?event_id=${id}`}
+                    className="inline-block w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+                  >
+                    Uloguј se da se pridružiš redu čekanja
+                  </Link>
+                ) : (
+                  <Link
+                    to={`/events/${id}/queue`}
+                    className="inline-block w-full bg-yellow-500 text-white py-3 rounded-lg font-semibold hover:bg-yellow-600 transition"
+                  >
+                    Pridružite se redu čekanja
+                  </Link>
+                )}
+              </div>
+
+              {/* Waitlist UI - shown only when no tickets available */}
+              {!anyTicketsAvailable() && (
+                <div className="mt-4 text-center">
+                  <p className="text-gray-600 mb-2">Nema dostupnih karata. Pridruzite se redu cekanja.</p>
+                  {waitlistEntry ? (
+                    <div className="flex flex-col items-center gap-2">
+                      {waitlistEntry.status === 'admitted' && reservation ? (
+                        <>
+                          <p className="text-sm text-gray-700">Imate rezervaciju. Istice: <span className="font-semibold">{new Date(reservation.expires_at).toLocaleString()}</span></p>
+                          <div className="flex gap-2">
+                            <button onClick={() => navigate(`/checkout/${reservation.purchase_id}`)} className="mt-2 bg-green-600 text-white px-4 py-2 rounded">Zavrsi kupovinu</button>
+                            <button onClick={leaveWaitlist} disabled={waitlistLoading} className="mt-2 bg-red-500 text-white px-4 py-2 rounded">Napusti red</button>
                           </div>
-                        );
-                      })}
-                  </div>
-
-                  <div className="border-t pt-4 mb-6">
-                    <div className="flex justify-between">
-                      <span className="text-lg font-semibold text-gray-800">Ukupno</span>
-                      <span className="text-lg font-bold text-blue-600">
-                        {getTotalPrice().toLocaleString('sr-RS')} RSD
-                      </span>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm text-gray-700">Vasa pozicija u redu: <span className="font-semibold">{waitlistEntry.position ?? '—'}</span></p>
+                          <button onClick={leaveWaitlist} disabled={waitlistLoading} className="mt-2 bg-red-500 text-white px-4 py-2 rounded">Napusti red</button>
+                        </>
+                      )}
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Ukljucen PDV
-                    </p>
-                  </div>
-                </>
-              )}
-
-              <button
-                onClick={handlePurchase}
-                disabled={getTotalTickets() === 0 || purchasing}
-                style={{ color: 'white' }}
-                className="w-full bg-blue-600 py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                {purchasing ? 'Obrada...' : 'Nastavi na placanje'}
-              </button>
-
-              {!isAuthenticated && (
-                <p className="text-xs text-gray-500 text-center mt-3">
-                  Morate biti <Link to="/login" className="text-blue-600 hover:underline">prijavljeni</Link> da biste kupili karte
-                </p>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <button onClick={joinWaitlist} disabled={waitlistLoading} className="mt-2 bg-yellow-500 text-white px-4 py-2 rounded">Pridruzi se redu cekanja</button>
+                      {queueSize !== null && <p className="text-xs text-gray-500">Ukupno u redu: {queueSize}</p>}
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* Event Info Summary */}
@@ -430,7 +385,7 @@ const EventDetail: React.FC = () => {
             </div>
           </div>
         </div>
-      </Section>
+      </div>
     </Master>
   );
 };

@@ -41,6 +41,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::get('/events/{event}/queue/status', [PurchaseController::class, 'queueStatus']);
 
     Route::get('/purchases', [PurchaseController::class, 'index']);
+    Route::post('/purchases', [PurchaseController::class, 'store']);
     Route::get('/purchases/{purchase}', [PurchaseController::class, 'show']);
     Route::post('/events/{event}/purchases/reserve', [PurchaseController::class, 'reserve']);
     Route::post('/purchases/{purchase}/pay', [PurchaseController::class, 'pay']);

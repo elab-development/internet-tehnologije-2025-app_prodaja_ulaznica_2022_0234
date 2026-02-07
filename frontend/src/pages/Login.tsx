@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import Input from '../components/form/Input';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login } = useAuth();
   const { showAlert } = useAlert();
   const [formData, setFormData] = useState({
@@ -28,11 +29,13 @@ const Login: React.FC = () => {
     try {
       await login(formData.email, formData.password);
       
-      // Redirect na osnovu role
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      if (user.role === 'admin') {
-        navigate('/admin/dashboard');
+      // Redirect na osnovu parametara
+      const eventId = searchParams.get('event_id');
+      if (eventId) {
+        // Ako je korisnik stigao sa stranice dogadjaja, pošalji ga u red čekanja
+        navigate(`/events/${eventId}/queue`);
       } else {
+        // Inače, svi ide na početnu stranicu
         navigate('/');
       }
       

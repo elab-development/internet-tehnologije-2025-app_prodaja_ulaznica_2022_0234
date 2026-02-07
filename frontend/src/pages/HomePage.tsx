@@ -27,7 +27,7 @@ const HomePage: React.FC = () => {
   const fetchEvents = async () => {
     try {
       const response = await api.get('/events');
-      etEvents(response.data.data || response.data || []);
+      setEvents(response.data.data || response.data || []);
     } catch (error: any) {
       showAlert({
         type: 'error',

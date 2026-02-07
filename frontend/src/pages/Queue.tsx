@@ -17,15 +17,37 @@ const Queue: React.FC = () => {
   // Funkcija za proveru statusa reda
   const checkQueueStatus = async () => {
     try {
-      const response = await api.get(`/events/${eventId}/queue/status`);
-      setQueueStatus(response.data);
+      const response = await api.get(`/events/${eventId}/waitlist/status`);
+      const data = response.data;
       
-      // Ako korisnik može da kupi, preusmeri ga
-      if (response.data.can_purchase) {
-        navigate(`/events/${eventId}/tickets`);
+      // Prikaži poziciju i status
+      setQueueStatus({
+        in_queue: !!data.waitlist_entry,
+        position: data.position || null,
+        total_in_queue: data.queue_size || 0,
+        can_purchase: data.waitlist_entry?.status === 'admitted' && !!data.reservation,
+        estimated_wait_minutes: null,
+        reservation_id: data.reservation?.purchase_id,
+        reservation_expires_at: data.reservation?.expires_at,
+      });
+      
+      // Ako je admitted i ima rezervaciju, preusmeri ga na checkout
+      if (data.waitlist_entry?.status === 'admitted' && data.reservation) {
+        navigate(`/checkout/${data.reservation.purchase_id}`);
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to check queue status');
+      // 404 znači da nije u redu
+      if (err.response?.status === 404) {
+        setQueueStatus({
+          in_queue: false,
+          position: null,
+          total_in_queue: 0,
+          can_purchase: false,
+          estimated_wait_minutes: null,
+        });
+      } else {
+        setError(err.response?.data?.message || 'Failed to check queue status');
+      }
     } finally {
       setLoading(false);
     }
@@ -35,7 +57,7 @@ const Queue: React.FC = () => {
   const joinQueue = async () => {
     try {
       setLoading(true);
-      await api.put(`/events/${eventId}/queue/join`);
+      await api.post(`/events/${eventId}/waitlist/join`);
       await checkQueueStatus();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to join queue');

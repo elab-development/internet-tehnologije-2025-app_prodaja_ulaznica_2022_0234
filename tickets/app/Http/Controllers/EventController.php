@@ -96,9 +96,9 @@ class EventController extends Controller
     {
         $event->load('ticketTypes');
 
-        return response()->json([
-            'event' => new EventResource($event),
-        ]);
+        // Return the resource directly so the JSON structure matches
+        // what the frontend expects (single wrapped `event` object).
+        return new EventResource($event);
     }
 
     public function update(Request $request, Event $event)

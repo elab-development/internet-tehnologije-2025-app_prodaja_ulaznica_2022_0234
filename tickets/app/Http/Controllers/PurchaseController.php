@@ -1,61 +1,180 @@
 <?php
 
-namespace Database\Seeders;
+namespace App\Http\Controllers;
 
-use Illuminate\Database\Seeder;
+use App\Models\Purchase;
 use App\Models\Event;
-use App\Models\Venue;
-use Illuminate\Support\Str;
-use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use App\Models\TicketType;
 
-class EventSeeder extends Seeder
+class PurchaseController extends Controller
 {
-    public function run(): void
+    /**
+     * Get all purchases for authenticated user
+     */
+    public function index(Request $request): JsonResponse
     {
-        $events = [
-            [
-                'title'       => 'Tech Summit Belgrade 2025',
-                'venue'       => 'Štark Arena',
-                'city'        => 'Beograd',
-                'start_at'    => Carbon::parse('2025-12-05 10:00:00'),
-                'end_at'      => Carbon::parse('2025-12-05 18:00:00'),
-                'description' => 'Najveća tech konferencija u regionu – AI, Cloud, DevOps.',
-            ],
-            [
-                'title'       => 'Rock Festival Novi Sad',
-                'venue'       => 'SPENS',
-                'city'        => 'Novi Sad',
-                'start_at'    => Carbon::parse('2026-06-20 18:00:00'),
-                'end_at'      => Carbon::parse('2026-06-21 01:00:00'),
-                'description' => 'Dvodnevni rock festival sa regionalnim bendovima.',
-            ],
-            [
-                'title'       => 'Derbi Zvezda vs Partizan',
-                'venue'       => 'Stadion Rajko Mitić',
-                'city'        => 'Beograd',
-                'start_at'    => Carbon::parse('2025-11-22 19:00:00'),
-                'end_at'      => Carbon::parse('2025-11-22 21:00:00'),
-                'description' => 'Večiti derbi – fudbalski spektakl.',
-            ],
-        ];
+        $purchases = Purchase::where('user_id', Auth::id())
+            ->with(['event', 'ticketType'])
+            ->get();
 
-        foreach ($events as $data) {
-            $slug = Str::slug($data['title']);
-            $venue = Venue::where('name', $data['venue'])->first();
+        return response()->json($purchases);
+    }
 
-            Event::updateOrCreate(
-                ['slug' => $slug],
-                [
-                    'title'       => $data['title'],
-                    'slug'        => $slug,
-                    'description' => $data['description'],
-                    'venue'       => $data['venue'],
-                    'venue_id'    => $venue ? $venue->id : null,
-                    'city'        => $data['city'],
-                    'start_at'    => $data['start_at'],
-                    'end_at'      => $data['end_at'],
-                ]
-            );
+    /**
+     * Get a specific purchase
+     */
+    public function show(Purchase $purchase): JsonResponse
+    {
+        $this->authorize('view', $purchase);
+
+        return response()->json($purchase->load(['event', 'ticketType']));
+    }
+
+    /**
+     * Reserve tickets for an event
+     */
+    public function reserve(Request $request, Event $event): JsonResponse
+    {
+        $validated = $request->validate([
+            'ticket_type_id' => 'required|exists:ticket_types,id',
+            'quantity' => 'required|integer|min:1',
+        ]);
+
+        $purchase = Purchase::create([
+            'user_id' => Auth::id(),
+            'event_id' => $event->id,
+            'ticket_type_id' => $validated['ticket_type_id'],
+            'quantity' => $validated['quantity'],
+            'status' => 'pending',
+        ]);
+
+        return response()->json($purchase, 201);
+    }
+
+    /**
+     * Create purchases for multiple ticket types (used by frontend)
+     * Expects: { event_id: number, tickets: [{ ticket_type_id, quantity }, ...] }
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'event_id' => 'required|exists:events,id',
+            'tickets' => 'required|array|min:1',
+            'tickets.*.ticket_type_id' => 'required|exists:ticket_types,id',
+            'tickets.*.quantity' => 'required|integer|min:1|max:10',
+        ]);
+
+        $userId = Auth::id();
+        $eventId = $validated['event_id'];
+        $firstPurchaseId = null;
+
+        try {
+            $result = DB::transaction(function () use ($validated, $userId, $eventId, &$firstPurchaseId) {
+                foreach ($validated['tickets'] as $t) {
+                    // lock the ticket type row to avoid race conditions
+                    $ticketType = TicketType::where('id', $t['ticket_type_id'])->lockForUpdate()->firstOrFail();
+
+                    if ($ticketType->event_id != $eventId) {
+                        throw new \Exception('Ticket type does not belong to specified event');
+                    }
+
+                    $available = $ticketType->quantity_total - $ticketType->quantity_sold;
+                    if ($available < $t['quantity']) {
+                        throw new \Exception('Not enough tickets available for: ' . $ticketType->name);
+                    }
+
+                    // reserve by incrementing quantity_sold
+                    $ticketType->quantity_sold = $ticketType->quantity_sold + $t['quantity'];
+                    $ticketType->save();
+
+                    $purchase = Purchase::create([
+                        'user_id' => $userId,
+                        'event_id' => $eventId,
+                        'ticket_type_id' => $ticketType->id,
+                        'quantity' => $t['quantity'],
+                        'unit_price' => $ticketType->price,
+                        'total_amount' => $ticketType->price * $t['quantity'],
+                        'status' => 'pending',
+                    ]);
+
+                    if (!$firstPurchaseId) {
+                        $firstPurchaseId = $purchase->id;
+                    }
+                }
+
+                return $firstPurchaseId;
+            });
+
+            return response()->json(['purchase_id' => $result], 201);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
         }
+    }
+
+    /**
+     * Pay for a purchase
+     */
+    public function pay(Purchase $purchase): JsonResponse
+    {
+        $this->authorize('update', $purchase);
+
+        if ($purchase->status !== 'pending') {
+            return response()->json(['message' => 'Cannot pay for this purchase'], 400);
+        }
+
+        $purchase->update(['status' => 'completed']);
+
+        return response()->json($purchase);
+    }
+
+    /**
+     * Cancel a purchase
+     */
+    public function cancel(Purchase $purchase): JsonResponse
+    {
+        $this->authorize('update', $purchase);
+
+        if ($purchase->status === 'completed') {
+            return response()->json(['message' => 'Cannot cancel a completed purchase'], 400);
+        }
+
+        $purchase->update(['status' => 'cancelled']);
+
+        return response()->json($purchase);
+    }
+
+    /**
+     * Join queue for an event (legacy)
+     */
+    public function joinQueue(Request $request, Event $event): JsonResponse
+    {
+        $validated = $request->validate([
+            'ticket_type_id' => 'required|exists:ticket_types,id',
+        ]);
+
+        // Implementation for queue logic
+        return response()->json(['message' => 'Joined queue'], 200);
+    }
+
+    /**
+     * Get queue status (legacy)
+     */
+    public function queueStatus(Event $event): JsonResponse
+    {
+        // Implementation for queue status
+        return response()->json(['position' => null], 200);
+    }
+
+    /**
+     * Admit next person from queue (admin)
+     */
+    public function admitNext(Event $event): JsonResponse
+    {
+        // Implementation for admitting next from queue
+        return response()->json(['message' => 'Next person admitted'], 200);
     }
 }

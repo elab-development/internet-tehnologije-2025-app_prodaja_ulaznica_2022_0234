@@ -75,7 +75,7 @@ const Header: React.FC = () => {
           <div className="relative flex items-center gap-4">
             {isAuthenticated ? (
               <div className="relative flex items-center gap-4" ref={wrapperRef}>
-                <ProfilePhoto image="https://via.placeholder.com/150" size="small" />
+                <ProfilePhoto image="/vite.svg" size="small" />
                 <button
                   type="button"
                   className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition"
