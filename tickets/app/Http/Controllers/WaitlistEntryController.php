@@ -139,7 +139,7 @@ class WaitlistEntryController extends Controller
      */
     public function listByEvent(Request $request, Event $event)
     {
-        $this->authorize('admin');
+       
 
         $entries = WaitlistEntry::where('event_id', $event->id)
             ->with(['user'])

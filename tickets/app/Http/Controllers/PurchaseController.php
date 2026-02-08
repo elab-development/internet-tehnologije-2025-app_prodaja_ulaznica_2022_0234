@@ -172,9 +172,50 @@ class PurchaseController extends Controller
     /**
      * Admit next person from queue (admin)
      */
-    public function admitNext(Event $event): JsonResponse
-    {
-        // Implementation for admitting next from queue
-        return response()->json(['message' => 'Next person admitted'], 200);
-    }
+    public function admitNext(Request $request, Event $event): JsonResponse
+{
+    $data = $request->validate([
+        'count'       => ['sometimes', 'integer', 'min:1', 'max:2000'],
+        'ttl_seconds' => ['sometimes', 'integer', 'min:60', 'max:3600'],
+    ]);
+
+    $count = $data['count'] ?? 50;
+    $ttl   = $data['ttl_seconds'] ?? 600;
+
+    $admitted = [];
+
+    DB::transaction(function () use ($event, $count, $ttl, &$admitted) {
+        $rows = DB::table('waitlist_entries')
+            ->where('event_id', $event->id)
+            ->where('status', 'queued')
+            ->orderBy('id', 'asc')
+            ->limit($count)
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($rows as $row) {
+            $token    = \Illuminate\Support\Str::random(32);
+            $ttlUntil = \Carbon\Carbon::now()->addSeconds($ttl);
+
+            DB::table('waitlist_entries')
+                ->where('id', $row->id)
+                ->update([
+                    'status'     => 'admitted',
+                    'token'      => $token,
+                    'ttl_until'  => $ttlUntil,
+                    'updated_at' => now(),
+                ]);
+
+            $admitted[] = ['user_id' => $row->user_id, 'token' => $token];
+        }
+    });
+
+    return response()->json([
+        'message'  => 'Admitted users',
+        'event_id' => $event->id,
+        'count'    => count($admitted),
+        'admitted' => $admitted,
+    ]);
+}
+
 }

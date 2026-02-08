@@ -7,6 +7,10 @@ use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\TicketTypeController;
 use App\Http\Controllers\SeatSelectionController;
 use App\Http\Controllers\WaitlistEntryController;
+use App\Models\Event;
+use App\Models\User;
+use App\Models\Purchase;
+use App\Models\TicketType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -54,7 +58,30 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+Route::middleware(['auth:sanctum'])->group(function () {
+
+    // Dashboard stats
+    Route::get('/stats', function () {
+        return response()->json([
+            'total_events' => Event::count(),
+            'total_users' => User::count(),
+            'total_purchases' => Purchase::count(),
+            'total_revenue' => Purchase::where('status', 'paid')->sum('total_amount'),
+            'pending_purchases' => Purchase::where('status', 'pending')->count(),
+            'tickets_sold' => TicketType::sum('quantity_sold'),
+        ]);
+    });
+
+    // Users list
+    Route::get('/users', function () {
+        return User::withCount('purchases')->get();
+    });
+
+    // Update user role
+    Route::put('/users/{user}', function (Request $request, User $user) {
+        $user->update($request->only(['role']));
+        return response()->json(['message' => 'User updated']);
+    });
 
     Route::resource('events', EventController::class)
         ->only(['store', 'update', 'destroy']);
