@@ -30,6 +30,10 @@ interface Event {
   ticket_types: TicketType[];
 }
 
+interface TicketSelection {
+  [ticketTypeId: number]: number;
+}
+
 const EventDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -39,20 +43,26 @@ const EventDetail: React.FC = () => {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [waitlistLoading, setWaitlistLoading] = useState(false);
+  const [purchasing, setPurchasing] = useState(false);
   const [waitlistEntry, setWaitlistEntry] = useState<any>(null);
   const [queueSize, setQueueSize] = useState<number | null>(null);
   const [reservation, setReservation] = useState<any>(null);
+  
+  // Ticket selection state
+  const [selectedTickets, setSelectedTickets] = useState<TicketSelection>({});
+
+  // Check if user is admitted (has gate_token)
+  const isAdmitted = waitlistEntry?.status === 'admitted';
+  const gateToken = waitlistEntry?.token || sessionStorage.getItem(`gate_token_${id}`);
 
   useEffect(() => {
     fetchEvent();
   }, [id]);
 
-  // Re-fetch waitlist status when auth state changes (e.g. user logs in)
   useEffect(() => {
     if (isAuthenticated) {
       fetchWaitlistStatus();
     } else {
-      // clear waitlist info when not authenticated
       setWaitlistEntry(null);
       setQueueSize(null);
       setReservation(null);
@@ -62,12 +72,9 @@ const EventDetail: React.FC = () => {
   const fetchEvent = async () => {
     try {
       const response = await api.get(`/events/${id}`);
-      // Backend returns a wrapped resource: { event: { ... } }
-      console.log('API Response:', response.data);
       const evt = response.data?.event ?? response.data;
       setEvent(evt);
     } catch (error: any) {
-      console.error('API Error:', error);
       showAlert({
         type: 'error',
         text: 'Greska pri ucitavanju dogadjaja.',
@@ -76,6 +83,30 @@ const EventDetail: React.FC = () => {
       navigate('/');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWaitlistStatus = async () => {
+    if (!id) return;
+    setWaitlistLoading(true);
+    try {
+      const res = await api.get(`/events/${id}/waitlist/status`);
+      const entry = res.data.waitlist_entry ?? null;
+      if (entry && res.data.position) entry.position = res.data.position;
+      setWaitlistEntry(entry);
+      setQueueSize(res.data.queue_size ?? null);
+      setReservation(res.data.reservation ?? null);
+      
+      // Save gate_token if admitted
+      if (entry?.status === 'admitted' && entry?.token) {
+        sessionStorage.setItem(`gate_token_${id}`, entry.token);
+      }
+    } catch (err: any) {
+      setWaitlistEntry(null);
+      setQueueSize(null);
+      setReservation(null);
+    } finally {
+      setWaitlistLoading(false);
     }
   };
 
@@ -112,36 +143,80 @@ const EventDetail: React.FC = () => {
     return true;
   };
 
-  const anyTicketsAvailable = () => {
-    if (!event || !event.ticket_types) return false;
-    return event.ticket_types.some(t => isTicketAvailable(t));
+  const handleQuantityChange = (ticketTypeId: number, quantity: number) => {
+    setSelectedTickets(prev => ({
+      ...prev,
+      [ticketTypeId]: Math.max(0, quantity)
+    }));
   };
 
+  const getTotalAmount = () => {
+    if (!event) return 0;
+    return event.ticket_types.reduce((total, tt) => {
+      const qty = selectedTickets[tt.id] || 0;
+      return total + (qty * parseFloat(tt.price));
+    }, 0);
+  };
 
+  const getTotalTickets = () => {
+    return Object.values(selectedTickets).reduce((sum, qty) => sum + qty, 0);
+  };
 
-  const fetchWaitlistStatus = async () => {
-    if (!id) return;
-    setWaitlistLoading(true);
+  const handlePurchase = async () => {
+    if (!isAuthenticated) {
+      showAlert({ type: 'warning', text: 'Morate biti prijavljeni.', show: true });
+      navigate('/login');
+      return;
+    }
+
+    if (getTotalTickets() === 0) {
+      showAlert({ type: 'warning', text: 'Izaberite bar jednu kartu.', show: true });
+      return;
+    }
+
+    setPurchasing(true);
+
     try {
-      const res = await api.get(`/events/${id}/waitlist/status`);
-      const entry = res.data.waitlist_entry ?? null;
-      if (entry && res.data.position) entry.position = res.data.position;
-      setWaitlistEntry(entry);
-      setQueueSize(res.data.queue_size ?? null);
-      setReservation(res.data.reservation ?? null);
-    } catch (err: any) {
-      // ignore if not joined or server returns 404/401
-      setWaitlistEntry(null);
-      setQueueSize(null);
-      setReservation(null);
+      // Build tickets array
+      const tickets = Object.entries(selectedTickets)
+        .filter(([_, qty]) => qty > 0)
+        .map(([ticketTypeId, quantity]) => ({
+          ticket_type_id: parseInt(ticketTypeId),
+          quantity
+        }));
+
+      const response = await api.post('/purchases', {
+        event_id: parseInt(id!),
+        tickets,
+        gate_token: gateToken, // Include gate token if available
+      });
+
+      showAlert({
+        type: 'success',
+        text: 'Karte su rezervisane! Preusmeravanje na placanje...',
+        show: true,
+      });
+
+      // Clear gate token after successful purchase
+      sessionStorage.removeItem(`gate_token_${id}`);
+
+      // Navigate to checkout
+      navigate(`/checkout/${response.data.purchase_id}`);
+
+    } catch (error: any) {
+      showAlert({
+        type: 'error',
+        text: error.response?.data?.message || 'Greska pri rezervaciji karata.',
+        show: true,
+      });
     } finally {
-      setWaitlistLoading(false);
+      setPurchasing(false);
     }
   };
 
   const joinWaitlist = async () => {
     if (!isAuthenticated) {
-      showAlert({ type: 'warning', text: 'Morate biti prijavljeni da se pridruzite redu cekanja.', show: true });
+      showAlert({ type: 'warning', text: 'Morate biti prijavljeni.', show: true });
       navigate('/login');
       return;
     }
@@ -153,31 +228,43 @@ const EventDetail: React.FC = () => {
       if (entry && res.data.position) entry.position = res.data.position;
       setWaitlistEntry(entry);
       setQueueSize(res.data.queue_size ?? null);
-      setReservation(res.data.reservation ?? null);
-      showAlert({ type: 'success', text: res.data.message || 'Pridruzili ste se redu cekanja.', show: true });
+      showAlert({ type: 'success', text: 'Pridruzili ste se redu cekanja.', show: true });
+      
+      // Redirect to queue page
+      navigate(`/events/${id}/queue`);
     } catch (err: any) {
-      showAlert({ type: 'error', text: err.response?.data?.message || 'Greska pri pridruzivanju redu.', show: true });
+      if (err.response?.status === 409) {
+        // Already in queue
+        navigate(`/events/${id}/queue`);
+      } else {
+        showAlert({ type: 'error', text: err.response?.data?.message || 'Greska pri pridruzivanju redu.', show: true });
+      }
     } finally {
       setWaitlistLoading(false);
     }
   };
 
   const leaveWaitlist = async () => {
-    if (!isAuthenticated) {
-      return;
-    }
-
     setWaitlistLoading(true);
     try {
-      const res = await api.delete(`/events/${id}/waitlist/leave`);
+      await api.delete(`/events/${id}/waitlist/leave`);
       setWaitlistEntry(null);
-      setQueueSize(res.data.queue_size ?? null);
-      showAlert({ type: 'success', text: res.data.message || 'Napustili ste red cekanja.', show: true });
+      sessionStorage.removeItem(`gate_token_${id}`);
+      showAlert({ type: 'success', text: 'Napustili ste red cekanja.', show: true });
     } catch (err: any) {
-      showAlert({ type: 'error', text: err.response?.data?.message || 'Greska pri napustanju reda.', show: true });
+      showAlert({ type: 'error', text: 'Greska pri napustanju reda.', show: true });
     } finally {
       setWaitlistLoading(false);
     }
+  };
+
+  // Get time remaining for admitted users
+  const getTimeRemaining = () => {
+    if (!waitlistEntry?.ttl_until) return null;
+    const now = new Date().getTime();
+    const expiry = new Date(waitlistEntry.ttl_until).getTime();
+    const diff = Math.max(0, Math.floor((expiry - now) / 1000 / 60));
+    return diff;
   };
 
   if (loading) {
@@ -244,6 +331,25 @@ const EventDetail: React.FC = () => {
         </div>
       </div>
 
+      {/* Admitted Banner */}
+      {isAdmitted && (
+        <div className="bg-green-500 text-white py-3">
+          <div className="container mx-auto px-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <span className="font-semibold">Dosli ste na red! Izaberite karte i zavrsete kupovinu.</span>
+            </div>
+            {getTimeRemaining() !== null && (
+              <span className="bg-green-600 px-3 py-1 rounded-full text-sm">
+                ⏱️ Jos {getTimeRemaining()} min
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
       <div className="container mx-auto px-4 py-12">
         <div className="grid lg:grid-cols-3 gap-8">
@@ -257,33 +363,66 @@ const EventDetail: React.FC = () => {
               </p>
             </div>
 
-            {/* Ticket Types - Info only (purchasing done through queue) */}
+            {/* Ticket Types */}
             <div className="bg-white rounded-xl shadow-md p-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Dostupne karte</h2>
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">
+                {isAdmitted ? 'Izaberite karte' : 'Dostupne karte'}
+              </h2>
+              
               {!event.ticket_types || event.ticket_types.length === 0 ? (
                 <p className="text-gray-500">Nema dostupnih karata za ovaj dogadjaj.</p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {event.ticket_types.map((ticketType) => {
                     const available = getAvailableQuantity(ticketType);
                     const isAvailable = isTicketAvailable(ticketType);
+                    const quantity = selectedTickets[ticketType.id] || 0;
 
                     return (
-                      <div key={ticketType.id} className="border rounded-lg p-3 flex justify-between items-center">
-                        <div>
-                          <h3 className="font-semibold text-gray-800">{ticketType.name}</h3>
-                          <p className="text-lg font-bold text-blue-600">
-                            {parseFloat(ticketType.price).toLocaleString('sr-RS')} RSD
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm text-gray-600">
-                            {isAvailable ? (
-                              <><span className="text-green-600 font-medium">{available}</span> dostupno</>
-                            ) : (
-                              <span className="text-red-600">Rasprodato</span>
+                      <div 
+                        key={ticketType.id} 
+                        className={`border rounded-lg p-4 ${isAdmitted && isAvailable ? 'border-blue-300 bg-blue-50' : ''}`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-800 text-lg">{ticketType.name}</h3>
+                            {ticketType.category && (
+                              <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">
+                                {ticketType.category}
+                              </span>
                             )}
-                          </p>
+                            <p className="text-2xl font-bold text-blue-600 mt-1">
+                              {parseFloat(ticketType.price).toLocaleString('sr-RS')} RSD
+                            </p>
+                            <p className="text-sm text-gray-500 mt-1">
+                              {isAvailable ? (
+                                <span className="text-green-600">{available} dostupno</span>
+                              ) : (
+                                <span className="text-red-600">Rasprodato</span>
+                              )}
+                            </p>
+                          </div>
+
+                          {/* Quantity Selector - Only for admitted users */}
+                          {isAdmitted && isAvailable && (
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleQuantityChange(ticketType.id, quantity - 1)}
+                                disabled={quantity === 0}
+                                className="w-10 h-10 rounded-full bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-xl font-bold"
+                              >
+                                -
+                              </button>
+                              <span className="w-12 text-center text-xl font-semibold">{quantity}</span>
+                              <button
+                                onClick={() => handleQuantityChange(ticketType.id, quantity + 1)}
+                                disabled={quantity >= Math.min(available, 10)}
+                                className="w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-xl font-bold text-white"
+                              >
+                                +
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -298,52 +437,118 @@ const EventDetail: React.FC = () => {
             <div className="bg-white rounded-xl shadow-md p-6 sticky top-4">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Vasa narudzbina</h2>
 
-              <div className="text-center py-6">
-                <p className="text-gray-600 mb-4">Pristupite redu čekanja da biste kupili karte.</p>
-                
-                {!isAuthenticated ? (
-                  <Link
-                    to={`/login?event_id=${id}`}
-                    className="inline-block w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+              {/* ADMITTED - Show ticket summary and buy button */}
+              {isAdmitted ? (
+                <div>
+                  {getTotalTickets() === 0 ? (
+                    <p className="text-gray-500 text-center py-4">
+                      Izaberite karte sa leve strane
+                    </p>
+                  ) : (
+                    <div className="space-y-3 mb-4">
+                      {event.ticket_types.map((tt) => {
+                        const qty = selectedTickets[tt.id] || 0;
+                        if (qty === 0) return null;
+                        return (
+                          <div key={tt.id} className="flex justify-between text-sm">
+                            <span>{tt.name} x {qty}</span>
+                            <span className="font-medium">
+                              {(qty * parseFloat(tt.price)).toLocaleString('sr-RS')} RSD
+                            </span>
+                          </div>
+                        );
+                      })}
+                      <div className="border-t pt-3 mt-3">
+                        <div className="flex justify-between text-lg font-bold">
+                          <span>Ukupno</span>
+                          <span className="text-blue-600">
+                            {getTotalAmount().toLocaleString('sr-RS')} RSD
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handlePurchase}
+                    disabled={purchasing || getTotalTickets() === 0}
+                    style={{ color: 'white' }}
+                    className="w-full bg-green-600 py-4 rounded-lg font-semibold text-lg hover:bg-green-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
-                    Uloguј se da se pridružiš redu čekanja
-                  </Link>
-                ) : (
+                    {purchasing ? 'Obrada...' : 'Kupi karte'}
+                  </button>
+
+                  {getTimeRemaining() !== null && (
+                    <p className="text-center text-sm text-orange-600 mt-3">
+                      ⏱️ Imate jos {getTimeRemaining()} minuta
+                    </p>
+                  )}
+
+                  <button
+                    onClick={leaveWaitlist}
+                    disabled={waitlistLoading}
+                    className="w-full mt-3 py-2 text-red-600 hover:text-red-700 text-sm"
+                  >
+                    Odustani i napusti red
+                  </button>
+                </div>
+              ) : waitlistEntry?.status === 'queued' ? (
+                /* IN QUEUE - Show position */
+                <div className="text-center py-4">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <span className="text-2xl font-bold text-blue-600">
+                      {waitlistEntry.position || '?'}
+                    </span>
+                  </div>
+                  <p className="text-gray-600 mb-2">Vasa pozicija u redu</p>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Sacekajte dok ne dodjete na red
+                  </p>
                   <Link
                     to={`/events/${id}/queue`}
-                    className="inline-block w-full bg-yellow-500 text-white py-3 rounded-lg font-semibold hover:bg-yellow-600 transition"
+                    className="inline-block w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+                    style={{ color: 'white' }}
                   >
-                    Pridružite se redu čekanja
+                    Pogledaj red cekanja
                   </Link>
-                )}
-              </div>
-
-              {/* Waitlist UI - shown only when no tickets available */}
-              {!anyTicketsAvailable() && (
-                <div className="mt-4 text-center">
-                  <p className="text-gray-600 mb-2">Nema dostupnih karata. Pridruzite se redu cekanja.</p>
-                  {waitlistEntry ? (
-                    <div className="flex flex-col items-center gap-2">
-                      {waitlistEntry.status === 'admitted' && reservation ? (
-                        <>
-                          <p className="text-sm text-gray-700">Imate rezervaciju. Istice: <span className="font-semibold">{new Date(reservation.expires_at).toLocaleString()}</span></p>
-                          <div className="flex gap-2">
-                            <button onClick={() => navigate(`/checkout/${reservation.purchase_id}`)} className="mt-2 bg-green-600 text-white px-4 py-2 rounded">Zavrsi kupovinu</button>
-                            <button onClick={leaveWaitlist} disabled={waitlistLoading} className="mt-2 bg-red-500 text-white px-4 py-2 rounded">Napusti red</button>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-sm text-gray-700">Vasa pozicija u redu: <span className="font-semibold">{waitlistEntry.position ?? '—'}</span></p>
-                          <button onClick={leaveWaitlist} disabled={waitlistLoading} className="mt-2 bg-red-500 text-white px-4 py-2 rounded">Napusti red</button>
-                        </>
-                      )}
-                    </div>
+                  <button
+                    onClick={leaveWaitlist}
+                    disabled={waitlistLoading}
+                    className="w-full mt-3 py-2 text-red-600 hover:text-red-700 text-sm"
+                  >
+                    Napusti red
+                  </button>
+                </div>
+              ) : (
+                /* NOT IN QUEUE - Show join button */
+                <div className="text-center py-4">
+                  <p className="text-gray-600 mb-4">
+                    Pristupite redu cekanja da biste kupili karte.
+                  </p>
+                  
+                  {!isAuthenticated ? (
+                    <Link
+                      to={`/login?redirect=/events/${id}`}
+                      className="inline-block w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+                      style={{ color: 'white' }}
+                    >
+                      Prijavite se
+                    </Link>
                   ) : (
-                    <div className="flex flex-col items-center gap-2">
-                      <button onClick={joinWaitlist} disabled={waitlistLoading} className="mt-2 bg-yellow-500 text-white px-4 py-2 rounded">Pridruzi se redu cekanja</button>
-                      {queueSize !== null && <p className="text-xs text-gray-500">Ukupno u redu: {queueSize}</p>}
-                    </div>
+                    <button
+                      onClick={joinWaitlist}
+                      disabled={waitlistLoading}
+                      style={{ color: 'white' }}
+                      className="w-full bg-yellow-500 py-3 rounded-lg font-semibold hover:bg-yellow-600 transition disabled:bg-gray-400"
+                    >
+                      {waitlistLoading ? 'Ucitavanje...' : 'Pridruzi se redu cekanja'}
+                    </button>
+                  )}
+
+                  {queueSize !== null && queueSize > 0 && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Trenutno u redu: {queueSize}
+                    </p>
                   )}
                 </div>
               )}
