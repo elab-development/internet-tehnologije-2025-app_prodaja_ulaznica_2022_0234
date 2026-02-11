@@ -57,7 +57,7 @@ const EditEvent: React.FC = () => {
     try {
       // Uses public endpoint to get event with ticket types
       const response = await api.get(`/events/${id}`);
-      const event = response.data;
+      const event = response.data.event || response.data;
 
       // Format datetime for input fields
       const formatDateTimeLocal = (dateString: string | null) => {

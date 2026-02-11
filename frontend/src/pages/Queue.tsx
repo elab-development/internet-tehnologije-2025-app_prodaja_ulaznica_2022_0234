@@ -119,14 +119,7 @@ const Queue: React.FC = () => {
     return () => clearInterval(interval);
   }, [queueStatus?.in_queue, queueStatus?.is_admitted]);
 
-  // Format time remaining
-  const getTimeRemaining = () => {
-    if (!queueStatus?.ttl_until) return null;
-    const now = new Date().getTime();
-    const expiry = new Date(queueStatus.ttl_until).getTime();
-    const diff = Math.max(0, Math.floor((expiry - now) / 1000 / 60));
-    return diff;
-  };
+  
 
   if (loading && !queueStatus) {
     return (
@@ -187,11 +180,7 @@ const Queue: React.FC = () => {
                   Sada mozete izabrati i kupiti karte. Pozurite!
                 </p>
 
-                {getTimeRemaining() !== null && (
-                  <div className="bg-orange-100 text-orange-800 px-4 py-2 rounded-lg mb-6">
-                    ⏱️ Imate jos <strong>{getTimeRemaining()}</strong> minuta da zavrsete kupovinu
-                  </div>
-                )}
+                
 
                 <button
                   onClick={handleProceedToTickets}

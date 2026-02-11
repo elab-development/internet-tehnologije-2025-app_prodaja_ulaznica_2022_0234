@@ -30,6 +30,8 @@ const CreateEvent: React.FC = () => {
     city: '',
     start_at: '',
     end_at: '',
+    rows: '10',
+    columns: '10',
   });
 
   const [ticketTypes, setTicketTypes] = useState<TicketTypeForm[]>([
@@ -147,7 +149,6 @@ const CreateEvent: React.FC = () => {
     setLoading(true);
 
     try {
-      // 1. Create the event
       const eventResponse = await api.post('/events', {
         title: eventData.title,
         slug: eventData.slug,
@@ -156,9 +157,17 @@ const CreateEvent: React.FC = () => {
         city: eventData.city,
         start_at: eventData.start_at,
         end_at: eventData.end_at,
+        rows: parseInt(eventData.rows) || 10,
+        columns: parseInt(eventData.columns) || 10,
       });
 
-      const eventId = eventResponse.data.id;
+      const eventId = eventResponse.data.event?.id || eventResponse.data.id;
+
+      if (!eventId) {
+        showAlert({ type: 'error', text: 'Failed to get event ID', show: true });
+        setLoading(false);
+        return;
+      }
 
       // 2. Create ticket types for the event
       for (const ticket of ticketTypes) {
@@ -190,6 +199,9 @@ const CreateEvent: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Calculate total seats
+  const totalSeats = (parseInt(eventData.rows) || 0) * (parseInt(eventData.columns) || 0);
 
   return (
     <Master>
@@ -280,7 +292,7 @@ const CreateEvent: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  Lokacija
+                  Lokacija i sedista
                 </h2>
 
                 <div className="grid md:grid-cols-2 gap-4">
@@ -311,6 +323,63 @@ const CreateEvent: React.FC = () => {
                       placeholder="npr. Beograd"
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                     />
+                  </div>
+                </div>
+
+                {/* Seats Configuration */}
+                <div className="mt-6 pt-6 border-t">
+                  <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg>
+                    Konfiguracija sedista
+                  </h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Automatski ce se kreirati sedista (npr. redovi A-J sa 10 sedista po redu = 100 sedista)
+                  </p>
+
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Broj redova
+                      </label>
+                      <input
+                        type="number"
+                        name="rows"
+                        value={eventData.rows}
+                        onChange={handleEventChange}
+                        min="1"
+                        max="26"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Maks. 26 (A-Z)</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Sedista po redu
+                      </label>
+                      <input
+                        type="number"
+                        name="columns"
+                        value={eventData.columns}
+                        onChange={handleEventChange}
+                        min="1"
+                        max="50"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Maks. 50</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Ukupno sedista
+                      </label>
+                      <div className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-800 font-semibold">
+                        {totalSeats}
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">Automatski</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -454,32 +523,6 @@ const CreateEvent: React.FC = () => {
                             required
                           />
                         </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Pocetak prodaje
-                          </label>
-                          <input
-                            type="datetime-local"
-                            name="sales_start_at"
-                            value={ticket.sales_start_at}
-                            onChange={(e) => handleTicketChange(index, e)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Kraj prodaje
-                          </label>
-                          <input
-                            type="datetime-local"
-                            name="sales_end_at"
-                            value={ticket.sales_end_at}
-                            onChange={(e) => handleTicketChange(index, e)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                          />
-                        </div>
                       </div>
 
                       <div className="mt-4">
@@ -522,6 +565,12 @@ const CreateEvent: React.FC = () => {
                     <span className="text-gray-500">Datum:</span>
                     <span className="font-medium text-gray-800 text-right">
                       {eventData.start_at ? new Date(eventData.start_at).toLocaleDateString('sr-RS') : '-'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Sedista:</span>
+                    <span className="font-medium text-gray-800">
+                      {totalSeats} ({eventData.rows} x {eventData.columns})
                     </span>
                   </div>
                   <div className="flex justify-between">

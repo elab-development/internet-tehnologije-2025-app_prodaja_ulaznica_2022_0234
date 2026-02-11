@@ -79,7 +79,7 @@ const AdminDashboard: React.FC = () => {
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
   const [loadingWaitlist, setLoadingWaitlist] = useState(false);
   const [admitCount, setAdmitCount] = useState(10);
-  const [ttlMinutes, setTtlMinutes] = useState(10);
+  
   const [admitting, setAdmitting] = useState(false);
 
   useEffect(() => {
@@ -162,7 +162,7 @@ const AdminDashboard: React.FC = () => {
     try {
       const response = await api.post(`/events/${selectedEventId}/queue/admit`, {
         count: admitCount,
-        ttl_seconds: ttlMinutes * 60,
+        
       });
       
       showAlert({
@@ -701,19 +701,7 @@ const AdminDashboard: React.FC = () => {
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Vreme za kupovinu (min)
-                      </label>
-                      <input
-                        type="number"
-                        min="5"
-                        max="60"
-                        value={ttlMinutes}
-                        onChange={(e) => setTtlMinutes(parseInt(e.target.value) || 10)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                    </div>
+                    
                     <div>
                       <button
                         onClick={handleAdmitUsers}

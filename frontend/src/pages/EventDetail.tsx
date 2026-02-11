@@ -162,57 +162,35 @@ const EventDetail: React.FC = () => {
     return Object.values(selectedTickets).reduce((sum, qty) => sum + qty, 0);
   };
 
-  const handlePurchase = async () => {
-    if (!isAuthenticated) {
-      showAlert({ type: 'warning', text: 'Morate biti prijavljeni.', show: true });
-      navigate('/login');
-      return;
-    }
+  const handlePurchase = () => {
+  if (!isAuthenticated) {
+    showAlert({ type: 'warning', text: 'Morate biti prijavljeni.', show: true });
+    navigate('/login');
+    return;
+  }
 
-    if (getTotalTickets() === 0) {
-      showAlert({ type: 'warning', text: 'Izaberite bar jednu kartu.', show: true });
-      return;
-    }
+  if (getTotalTickets() === 0) {
+    showAlert({ type: 'warning', text: 'Izaberite bar jednu kartu.', show: true });
+    return;
+  }
 
-    setPurchasing(true);
+  // Get the first selected ticket type and its quantity
+  const selectedEntry = Object.entries(selectedTickets)
+    .find(([_, qty]) => qty > 0);
 
-    try {
-      // Build tickets array
-      const tickets = Object.entries(selectedTickets)
-        .filter(([_, qty]) => qty > 0)
-        .map(([ticketTypeId, quantity]) => ({
-          ticket_type_id: parseInt(ticketTypeId),
-          quantity
-        }));
-
-      const response = await api.post('/purchases', {
-        event_id: parseInt(id!),
-        tickets,
-        gate_token: gateToken, // Include gate token if available
-      });
-
-      showAlert({
-        type: 'success',
-        text: 'Karte su rezervisane! Preusmeravanje na placanje...',
-        show: true,
-      });
-
-      // Clear gate token after successful purchase
-      sessionStorage.removeItem(`gate_token_${id}`);
-
-      // Navigate to checkout
-      navigate(`/checkout/${response.data.purchase_id}`);
-
-    } catch (error: any) {
-      showAlert({
-        type: 'error',
-        text: error.response?.data?.message || 'Greska pri rezervaciji karata.',
-        show: true,
-      });
-    } finally {
-      setPurchasing(false);
-    }
-  };
+  if (selectedEntry) {
+    const [ticketTypeId, quantity] = selectedEntry;
+    
+    // Store selection in sessionStorage
+    sessionStorage.setItem(`ticket_selection_${id}`, JSON.stringify({
+      tickets: selectedTickets,
+      gate_token: gateToken,
+    }));
+    
+    // Navigate to seat selection WITH quantity
+    navigate(`/events/${id}/seats/${ticketTypeId}?quantity=${quantity}`);
+  }
+};
 
   const joinWaitlist = async () => {
     if (!isAuthenticated) {
@@ -259,13 +237,7 @@ const EventDetail: React.FC = () => {
   };
 
   // Get time remaining for admitted users
-  const getTimeRemaining = () => {
-    if (!waitlistEntry?.ttl_until) return null;
-    const now = new Date().getTime();
-    const expiry = new Date(waitlistEntry.ttl_until).getTime();
-    const diff = Math.max(0, Math.floor((expiry - now) / 1000 / 60));
-    return diff;
-  };
+  
 
   if (loading) {
     return (
@@ -341,11 +313,7 @@ const EventDetail: React.FC = () => {
               </svg>
               <span className="font-semibold">Dosli ste na red! Izaberite karte i zavrsete kupovinu.</span>
             </div>
-            {getTimeRemaining() !== null && (
-              <span className="bg-green-600 px-3 py-1 rounded-full text-sm">
-                ⏱️ Jos {getTimeRemaining()} min
-              </span>
-            )}
+            
           </div>
         </div>
       )}
@@ -475,14 +443,10 @@ const EventDetail: React.FC = () => {
                     style={{ color: 'white' }}
                     className="w-full bg-green-600 py-4 rounded-lg font-semibold text-lg hover:bg-green-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
-                    {purchasing ? 'Obrada...' : 'Kupi karte'}
+                    {purchasing ? 'Obrada...' : 'Izaberi sedista'}
                   </button>
 
-                  {getTimeRemaining() !== null && (
-                    <p className="text-center text-sm text-orange-600 mt-3">
-                      ⏱️ Imate jos {getTimeRemaining()} minuta
-                    </p>
-                  )}
+                  
 
                   <button
                     onClick={leaveWaitlist}

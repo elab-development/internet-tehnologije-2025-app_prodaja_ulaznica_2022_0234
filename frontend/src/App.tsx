@@ -18,6 +18,7 @@ import CreateEvent from './pages/CreateEvent';
 import EditEvent from './pages/EditEvent';
 import MyTickets from './pages/MyTickets';
 import EventSearch from './pages/EventSearch';
+import SeatSelection from './pages/SeatSelection';
 
 
 
@@ -74,6 +75,14 @@ function App() {
                 </ProtectedRoute>
               } 
             />
+            <Route 
+              path="/events/:eventId/seats/:ticketTypeId" 
+              element={
+                <ProtectedRoute>
+                  <SeatSelection />
+                </ProtectedRoute>
+              } 
+/>
             
 
             {/* Protected admin routes */}

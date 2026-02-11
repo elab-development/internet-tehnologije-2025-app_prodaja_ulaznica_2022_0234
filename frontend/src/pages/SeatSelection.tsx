@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import { api } from '../services/api';
 import Master from '../components/layout/Master';
 import Section from '../components/section/Section';
+
 
 interface Seat {
   id: number;
@@ -44,6 +45,8 @@ const SeatSelection: React.FC = () => {
   const [selectedSeats, setSelectedSeats] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [searchParams] = useSearchParams();
+  const quantityFromUrl = parseInt(searchParams.get('quantity') || '1');
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -55,10 +58,18 @@ const SeatSelection: React.FC = () => {
 
   const fetchSeatData = async () => {
     try {
+      const selectionData = sessionStorage.getItem(`ticket_selection_${eventId}`);
+     const selection = selectionData ? JSON.parse(selectionData) : null;
+     const quantity = selection?.tickets?.[ticketTypeId!] || 1;
+
       const response = await api.get(
         `/events/${eventId}/seat-selection/${ticketTypeId}`
       );
-      setSeatData(response.data);
+      
+      setSeatData({
+      ...response.data,
+      quantity_to_purchase: quantity,
+    });
     } catch (error: any) {
       showAlert({
         type: 'error',
@@ -85,7 +96,7 @@ const SeatSelection: React.FC = () => {
       if (prev.includes(seatId)) {
         return prev.filter((id) => id !== seatId);
       } else {
-        if (seatData && prev.length < seatData.quantity_to_purchase) {
+        if (seatData && prev.length < quantityFromUrl) {
           return [...prev, seatId];
         } else {
           showAlert({
@@ -281,7 +292,7 @@ const SeatSelection: React.FC = () => {
               <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-gray-700">
                   <strong>Napomena:</strong> Kliknite na dostupna sedišta da ih izaberete.
-                  Možete izabrati do <strong>{seatData.quantity_to_purchase}</strong> sedišta.
+                  Možete izabrati do <strong>{quantityFromUrl}</strong> sedišta.
                 </p>
               </div>
             </div>
@@ -315,7 +326,7 @@ const SeatSelection: React.FC = () => {
               {/* Selected Seats */}
               <div className="border-b pb-4 mb-4">
                 <p className="text-sm text-gray-600 mb-2">
-                  Izabrana sedišta ({selectedSeats.length}/{seatData.quantity_to_purchase})
+                  Izabrana sedišta ({selectedSeats.length}/{quantityFromUrl})
                 </p>
                 {selectedSeats.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
@@ -376,7 +387,7 @@ const SeatSelection: React.FC = () => {
                 onClick={handleProceedToPayment}
                 disabled={
                   processing ||
-                  selectedSeats.length !== seatData.quantity_to_purchase
+                  selectedSeats.length !== quantityFromUrl
                 }
                 style={{ color: 'white' }}
                 className="w-full bg-green-600 py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
