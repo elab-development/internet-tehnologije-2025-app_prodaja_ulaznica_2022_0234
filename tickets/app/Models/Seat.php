@@ -10,6 +10,7 @@ class Seat extends Model
     use HasFactory;
 
     protected $fillable = [
+        'event_id',
         'venue_id',
         'seat_number',
         'row',

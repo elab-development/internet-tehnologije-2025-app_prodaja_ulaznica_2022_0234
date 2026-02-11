@@ -29,9 +29,11 @@ class PurchaseController extends Controller
      */
     public function show(Purchase $purchase): JsonResponse
     {
-        $this->authorize('view', $purchase);
+        if ($purchase->user_id !== Auth::id()) {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
 
-        return response()->json($purchase->load(['event', 'ticketType']));
+         return response()->json($purchase->load(['event', 'ticketType']));
     }
 
     /**
@@ -120,8 +122,7 @@ class PurchaseController extends Controller
      */
     public function pay(Purchase $purchase): JsonResponse
     {
-        $this->authorize('update', $purchase);
-
+        
         if ($purchase->status !== 'pending') {
             return response()->json(['message' => 'Cannot pay for this purchase'], 400);
         }
@@ -136,7 +137,7 @@ class PurchaseController extends Controller
      */
     public function cancel(Purchase $purchase): JsonResponse
     {
-        $this->authorize('update', $purchase);
+        
 
         if ($purchase->status === 'completed') {
             return response()->json(['message' => 'Cannot cancel a completed purchase'], 400);
@@ -176,15 +177,15 @@ class PurchaseController extends Controller
 {
     $data = $request->validate([
         'count'       => ['sometimes', 'integer', 'min:1', 'max:2000'],
-        'ttl_seconds' => ['sometimes', 'integer', 'min:60', 'max:3600'],
+        
     ]);
 
     $count = $data['count'] ?? 50;
-    $ttl   = $data['ttl_seconds'] ?? 600;
+    
 
     $admitted = [];
 
-    DB::transaction(function () use ($event, $count, $ttl, &$admitted) {
+    DB::transaction(function () use ($event, $count, &$admitted) {
         $rows = DB::table('waitlist_entries')
             ->where('event_id', $event->id)
             ->where('status', 'queued')
@@ -195,14 +196,14 @@ class PurchaseController extends Controller
 
         foreach ($rows as $row) {
             $token    = \Illuminate\Support\Str::random(32);
-            $ttlUntil = \Carbon\Carbon::now()->addSeconds($ttl);
+            
 
             DB::table('waitlist_entries')
                 ->where('id', $row->id)
                 ->update([
                     'status'     => 'admitted',
                     'token'      => $token,
-                    'ttl_until'  => $ttlUntil,
+                    'ttl_until'  => null,
                     'updated_at' => now(),
                 ]);
 

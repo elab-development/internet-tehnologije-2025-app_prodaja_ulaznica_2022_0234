@@ -21,17 +21,13 @@ class SeatSelectionController extends Controller
             return response()->json(['error' => 'Ticket type not available'], 422);
         }
 
-        $venue = $event->venue()->first();
+        // Get seats directly by event_id
+        $seats = Seat::where('event_id', $event->id)
+            ->orderBy('row')
+            ->orderBy('column')
+            ->get();
 
-        $seats = collect([]);
-        if ($venue) {
-            $seats = Seat::where('venue_id', $venue->id)
-                ->orderBy('row')
-                ->orderBy('column')
-                ->get();
-        }
-
-        // Determine seat status by existing tickets (reserved/sold) prioritised
+        // Determine seat status by existing tickets (reserved/sold)
         $ticketStatuses = Ticket::where('ticket_type_id', $ticketType->id)
             ->whereIn('status', ['reserved', 'sold'])
             ->pluck('status', 'seat_id')
@@ -52,7 +48,13 @@ class SeatSelectionController extends Controller
         return response()->json([
             'event_id' => $event->id,
             'event_title' => $event->title,
-            'venue' => $venue,
+            'venue' => [
+                'id' => $event->id,
+                'name' => $event->venue,
+                'rows' => $seats->pluck('row')->unique()->count(),
+                'columns' => $seats->where('row', $seats->first()->row ?? 'A')->count(),
+                'total_seats' => $seats->count(),
+            ],
             'seats' => $payloadSeats,
             'ticket_type_id' => $ticketType->id,
             'ticket_type_name' => $ticketType->name,
@@ -64,8 +66,8 @@ class SeatSelectionController extends Controller
     // POST /events/{event}/seat-selection/{ticketType}/reserve
     public function reserve(Request $request, Event $event, TicketType $ticketType)
     {
-        if (!Auth::check() || Auth::user()->role !== 'user') {
-            return response()->json(['error' => 'Only logged-in users can reserve seats'], 403);
+        if (!Auth::check()) {
+            return response()->json(['error' => 'Must be logged in'], 403);
         }
 
         $data = $request->validate([
@@ -85,8 +87,8 @@ class SeatSelectionController extends Controller
                     'status' => 'admitted'
                 ])->first();
 
-            if (!$row || !$row->ttl_until || Carbon::now()->gte(Carbon::parse($row->ttl_until))) {
-                return response()->json(['error' => 'Invalid or expired gate_token'], 403);
+            if (!$row) {
+                return response()->json(['error' => 'Invalid gate_token'], 403);
             }
         }
 
@@ -96,7 +98,10 @@ class SeatSelectionController extends Controller
         DB::beginTransaction();
         try {
             // Lock seats
-            $seats = Seat::whereIn('id', $seatIds)->lockForUpdate()->get();
+            $seats = Seat::whereIn('id', $seatIds)
+                ->where('event_id', $event->id)
+                ->lockForUpdate()
+                ->get();
 
             if (count($seats) !== count($seatIds)) {
                 DB::rollBack();
