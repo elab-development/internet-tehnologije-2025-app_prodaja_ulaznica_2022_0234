@@ -2,28 +2,68 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
-import Input from '../Components/form/Input';
+import Input from '../Components/Form/Input';
+import { handleApiError } from '../utils/ErrorHandler';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { login } = useAuth();
   const { showAlert } = useAlert();
+  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
+
+  // VALIDACIJA EMAIL-A
+  const validateEmail = (email: string): boolean => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(email);
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+    // Ukloni grešku kada korisnik počne da kuca
+    if (errors[e.target.name as keyof typeof errors]) {
+      setErrors({ ...errors, [e.target.name]: undefined });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
+
+    // INPUT VALIDACIJA
+    let hasErrors = false;
+    const newErrors: { email?: string; password?: string } = {};
+
+    if (!formData.email) {
+      newErrors.email = 'Email je obavezan';
+      hasErrors = true;
+    } else if (!validateEmail(formData.email)) {
+      newErrors.email = 'Unesite validnu email adresu';
+      hasErrors = true;
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Lozinka je obavezna';
+      hasErrors = true;
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Lozinka mora imati najmanje 6 karaktera';
+      hasErrors = true;
+    }
+
+    if (hasErrors) {
+      setErrors(newErrors);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -32,22 +72,21 @@ const Login: React.FC = () => {
       // Redirect na osnovu parametara
       const eventId = searchParams.get('event_id');
       if (eventId) {
-        // Ako je korisnik stigao sa stranice dogadjaja, pošalji ga u red čekanja
         navigate(`/events/${eventId}/queue`);
       } else {
-        // Inače, svi ide na početnu stranicu
         navigate('/');
       }
       
       showAlert({
         type: 'success',
-        text: 'Successfully logged in!',
+        text: 'Uspešno ste se prijavili!',
         show: true
       });
     } catch (err: any) {
+      const errorMessage = handleApiError(err);
       showAlert({
         type: 'error',
-        text: err.response?.data?.message || 'Login failed. Please try again.',
+        text: errorMessage,
         show: true
       });
     } finally {
@@ -77,6 +116,9 @@ const Login: React.FC = () => {
               maxLength={100}
               placeholder="vasa@emailadresa.com"
             />
+            {errors.email && (
+              <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+            )}
           </div>
 
           <div>
@@ -92,6 +134,9 @@ const Login: React.FC = () => {
               maxLength={50}
               placeholder="••••••••"
             />
+            {errors.password && (
+              <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+            )}
           </div>
 
           <div className="flex items-center justify-between">
