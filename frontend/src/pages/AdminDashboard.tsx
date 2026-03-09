@@ -5,6 +5,8 @@ import { useAlert } from '../hooks/useAlert';
 import { api } from '../services/api';
 import Master from '../components/layout/Master';
 import Section from '../components/section/Section';
+import SalesChart from '../Components/charts/SalesChart';
+import EventsChart from '@/Components/charts/EventsChart';
 
 interface Stats {
   total_events: number;
@@ -73,6 +75,16 @@ const AdminDashboard: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [salesData, setSalesData] = useState<{ labels: string[], values: number[] }>({
+    labels: [],
+    values: []
+  });
+
+  const [eventsData, setEventsData] = useState<{ labels: string[], values: number[] }>({
+    labels: [],
+    values: []
+  });
+
   
   // Queue state
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
@@ -93,6 +105,7 @@ const AdminDashboard: React.FC = () => {
       return;
     }
     fetchData();
+    fetchChartData();
   }, [isAuthenticated, isAdmin]);
 
   // Fetch waitlist when event is selected
@@ -138,6 +151,20 @@ const AdminDashboard: React.FC = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchChartData = async () => {
+    try {
+      // Sales data po mesecima
+      const salesRes = await api.get('/stats/sales-by-month');
+      setSalesData(salesRes.data);
+
+      // Events data - top 5 događaja
+      const eventsRes = await api.get('/stats/sales-by-event');
+      setEventsData(eventsRes.data);
+    } catch (error) {
+      console.error('Error fetching chart data:', error);
     }
   };
 
@@ -412,6 +439,26 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Chart */}
+            <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+              <SalesChart
+                data={salesData.labels.length > 0 ? salesData :{
+                  labels: ['Januar', 'Februar', 'Mart', 'April', 'Maj', 'Jun', 'Jul', 'Avgust', 'Septembar', 'Oktobar', 'Novembar', 'Decembar'],
+                  values: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+               }}
+              />
+            </div>
+
+            {/* Events Chart */}
+            <div className="bg-white rounded-xl shadow-md p-6">
+              <EventsChart
+                data={eventsData.labels.length > 0 ? eventsData : {
+                  labels: ['Nema podataka'],
+                  values: [1],
+              }}
+            />
+          </div>
 
             {/* Recent Activity */}
             <div className="grid lg:grid-cols-2 gap-6">
