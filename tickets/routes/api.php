@@ -13,6 +13,7 @@ use App\Models\Purchase;
 use App\Models\TicketType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
 
 Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
     return $request->user();
@@ -69,6 +70,49 @@ Route::middleware(['auth:sanctum'])->group(function () {
             'total_revenue' => Purchase::where('status', 'paid')->sum('total_amount'),
             'pending_purchases' => Purchase::where('status', 'pending')->count(),
             'tickets_sold' => TicketType::sum('quantity_sold'),
+        ]);
+    });
+
+    // Charts data
+
+    Route::get('/stats/sales-by-month', function () {
+        $monthlySales = DB::table('purchases')
+            ->select(
+                DB::raw('MONTH(created_at) as month'),
+                DB::raw('COUNT(*) as count')
+            )
+            ->where('status', 'paid')
+            ->whereYear('created_at', date('Y'))
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get();
+
+        $labels = ['Jan', 'Feb', 'Mar', 'Apr', 'Maj', 'Jun', 'Jul', 'Avg', 'Sep', 'Okt', 'Nov', 'Dec'];
+        $values = array_fill(0, 12, 0);
+
+        foreach ($monthlySales as $sale) {
+            $values[$sale->month - 1] = $sale->count;
+        }
+
+        return response()->json([
+            'labels' => $labels,
+            'values' => $values,
+        ]);
+    });
+
+    Route::get('/stats/sales-by-event', function () {
+        $eventSales = DB::table('purchases')
+            ->join('events', 'purchases.event_id', '=', 'events.id')
+            ->select('events.title as event_title', DB::raw('COUNT(*) as ticket_count'))
+            ->where('purchases.status', 'paid')
+            ->groupBy('events.id', 'events.title')
+            ->orderBy('ticket_count', 'desc')
+            ->limit(5)
+            ->get();
+
+        return response()->json([
+            'labels' => $eventSales->pluck('event_title')->toArray(),
+            'values' => $eventSales->pluck('ticket_count')->toArray(),
         ]);
     });
 
