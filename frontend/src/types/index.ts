@@ -13,6 +13,8 @@ export interface Event {
   description: string;
   date: string;
   location: string;
+  latitude?: number;   
+  longitude?: number;
   image?: string;
   available_tickets?: number;
   total_tickets?: number;
