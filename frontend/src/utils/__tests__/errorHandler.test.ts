@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { handleApiError } from '../errorHandler';
+import { handleApiError } from '../ErrorHandler';
 
 describe('Error Handler', () => {
   it('should handle 401 error', () => {
