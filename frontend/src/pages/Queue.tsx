@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
-import Master from '../components/layout/Master';
+import Master from '../Components/layout/Master';
 
 interface QueueStatus {
   in_queue: boolean;

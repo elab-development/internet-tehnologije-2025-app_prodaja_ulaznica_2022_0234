@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import Master from '../components/layout/Master';
-import Section from '../components/section/Section';
-import Heading from '../components/heading/Heading';
-import CardGroup from '../components/card/CardGroup';
+import Master from '../Components/layout/Master';
+import Section from '../Components/section/Section';
+import Heading from '../Components/heading/Heading';
+import CardGroup from '../Components/card/CardGroup';
 import { useAlert } from '../hooks/useAlert';
 
 interface ResultEvent {
