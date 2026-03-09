@@ -4,11 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Purchase;
 use App\Models\Event;
+use App\Models\TicketType;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use App\Models\TicketType;
+use Illuminate\Support\Facades\Log;
 
 class PurchaseController extends Controller
 {
@@ -30,10 +31,10 @@ class PurchaseController extends Controller
     public function show(Purchase $purchase): JsonResponse
     {
         if ($purchase->user_id !== Auth::id()) {
-        return response()->json(['message' => 'Unauthorized'], 403);
-    }
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
 
-         return response()->json($purchase->load(['event', 'ticketType']));
+        return response()->json($purchase->load(['event', 'ticketType']));
     }
 
     /**
@@ -43,77 +44,88 @@ class PurchaseController extends Controller
     {
         $validated = $request->validate([
             'ticket_type_id' => 'required|exists:ticket_types,id',
-            'quantity' => 'required|integer|min:1',
+            'quantity'       => 'required|integer|min:1|max:10',
         ]);
 
+        $ticketType = TicketType::where('id', $validated['ticket_type_id'])
+            ->where('event_id', $event->id)
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        $available = $ticketType->quantity_total - $ticketType->quantity_sold;
+        if ($available < $validated['quantity']) {
+            return response()->json(['message' => 'Not enough tickets available'], 400);
+        }
+
+        $ticketType->increment('quantity_sold', $validated['quantity']);
+
         $purchase = Purchase::create([
-            'user_id' => Auth::id(),
-            'event_id' => $event->id,
-            'ticket_type_id' => $validated['ticket_type_id'],
-            'quantity' => $validated['quantity'],
-            'status' => 'pending',
+            'user_id'        => Auth::id(),
+            'event_id'       => $event->id,
+            'ticket_type_id' => $ticketType->id,
+            'quantity'       => $validated['quantity'],
+            'unit_price'     => $ticketType->price,
+            'total_amount'   => $ticketType->price * $validated['quantity'],
+            'status'         => 'pending',
         ]);
 
         return response()->json($purchase, 201);
     }
 
     /**
-     * Create purchases for multiple ticket types (used by frontend)
-     * Expects: { event_id: number, tickets: [{ ticket_type_id, quantity }, ...] }
+     * Create purchases for multiple ticket types
      */
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'event_id' => 'required|exists:events,id',
-            'tickets' => 'required|array|min:1',
+            'event_id'        => 'required|exists:events,id',
+            'tickets'         => 'required|array|min:1',
             'tickets.*.ticket_type_id' => 'required|exists:ticket_types,id',
-            'tickets.*.quantity' => 'required|integer|min:1|max:10',
+            'tickets.*.quantity'       => 'required|integer|min:1|max:10',
         ]);
 
         $userId = Auth::id();
         $eventId = $validated['event_id'];
-        $firstPurchaseId = null;
 
         try {
-            $result = DB::transaction(function () use ($validated, $userId, $eventId, &$firstPurchaseId) {
-                foreach ($validated['tickets'] as $t) {
-                    // lock the ticket type row to avoid race conditions
-                    $ticketType = TicketType::where('id', $t['ticket_type_id'])->lockForUpdate()->firstOrFail();
+            $firstPurchaseId = DB::transaction(function () use ($validated, $userId, $eventId) {
+                $firstId = null;
 
-                    if ($ticketType->event_id != $eventId) {
-                        throw new \Exception('Ticket type does not belong to specified event');
-                    }
+                foreach ($validated['tickets'] as $t) {
+                    $ticketType = TicketType::where('id', $t['ticket_type_id'])
+                        ->where('event_id', $eventId)
+                        ->lockForUpdate()
+                        ->firstOrFail();
 
                     $available = $ticketType->quantity_total - $ticketType->quantity_sold;
                     if ($available < $t['quantity']) {
-                        throw new \Exception('Not enough tickets available for: ' . $ticketType->name);
+                        throw new \Exception('Not enough tickets for: ' . $ticketType->name);
                     }
 
-                    // reserve by incrementing quantity_sold
-                    $ticketType->quantity_sold = $ticketType->quantity_sold + $t['quantity'];
-                    $ticketType->save();
+                    $ticketType->increment('quantity_sold', $t['quantity']);
 
                     $purchase = Purchase::create([
-                        'user_id' => $userId,
-                        'event_id' => $eventId,
+                        'user_id'        => $userId,
+                        'event_id'       => $eventId,
                         'ticket_type_id' => $ticketType->id,
-                        'quantity' => $t['quantity'],
-                        'unit_price' => $ticketType->price,
-                        'total_amount' => $ticketType->price * $t['quantity'],
-                        'status' => 'pending',
+                        'quantity'       => $t['quantity'],
+                        'unit_price'     => $ticketType->price,
+                        'total_amount'   => $ticketType->price * $t['quantity'],
+                        'status'         => 'pending',
                     ]);
 
-                    if (!$firstPurchaseId) {
-                        $firstPurchaseId = $purchase->id;
+                    if (!$firstId) {
+                        $firstId = $purchase->id;
                     }
                 }
 
-                return $firstPurchaseId;
+                return $firstId;
             });
 
-            return response()->json(['purchase_id' => $result], 201);
+            return response()->json(['purchase_id' => $firstPurchaseId], 201);
         } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 400);
+            Log::error($e->getMessage());
+            return response()->json(['message' => 'Could not create purchase'], 400);
         }
     }
 
@@ -122,7 +134,6 @@ class PurchaseController extends Controller
      */
     public function pay(Purchase $purchase): JsonResponse
     {
-        
         if ($purchase->status !== 'pending') {
             return response()->json(['message' => 'Cannot pay for this purchase'], 400);
         }
@@ -137,8 +148,6 @@ class PurchaseController extends Controller
      */
     public function cancel(Purchase $purchase): JsonResponse
     {
-        
-
         if ($purchase->status === 'completed') {
             return response()->json(['message' => 'Cannot cancel a completed purchase'], 400);
         }
@@ -157,66 +166,51 @@ class PurchaseController extends Controller
             'ticket_type_id' => 'required|exists:ticket_types,id',
         ]);
 
-        // Implementation for queue logic
         return response()->json(['message' => 'Joined queue'], 200);
     }
 
     /**
-     * Get queue status (legacy)
-     */
-    public function queueStatus(Event $event): JsonResponse
-    {
-        // Implementation for queue status
-        return response()->json(['position' => null], 200);
-    }
-
-    /**
-     * Admit next person from queue (admin)
+     * Admit next people from queue (admin)
      */
     public function admitNext(Request $request, Event $event): JsonResponse
-{
-    $data = $request->validate([
-        'count'       => ['sometimes', 'integer', 'min:1', 'max:2000'],
-        
-    ]);
+    {
+        $validated = $request->validate([
+            'count' => ['sometimes', 'integer', 'min:1', 'max:2000'],
+        ]);
 
-    $count = $data['count'] ?? 50;
-    
+        $count = $validated['count'] ?? 50;
+        $admitted = [];
 
-    $admitted = [];
+        DB::transaction(function () use ($event, $count, &$admitted) {
+            $rows = DB::table('waitlist_entries')
+                ->where('event_id', $event->id)
+                ->where('status', 'queued')
+                ->orderBy('id', 'asc')
+                ->limit($count)
+                ->lockForUpdate()
+                ->get();
 
-    DB::transaction(function () use ($event, $count, &$admitted) {
-        $rows = DB::table('waitlist_entries')
-            ->where('event_id', $event->id)
-            ->where('status', 'queued')
-            ->orderBy('id', 'asc')
-            ->limit($count)
-            ->lockForUpdate()
-            ->get();
+            foreach ($rows as $row) {
+                $token = \Illuminate\Support\Str::random(32);
 
-        foreach ($rows as $row) {
-            $token    = \Illuminate\Support\Str::random(32);
-            
+                DB::table('waitlist_entries')
+                    ->where('id', $row->id)
+                    ->update([
+                        'status'     => 'admitted',
+                        'token'      => $token,
+                        'ttl_until'  => null,
+                        'updated_at' => now(),
+                    ]);
 
-            DB::table('waitlist_entries')
-                ->where('id', $row->id)
-                ->update([
-                    'status'     => 'admitted',
-                    'token'      => $token,
-                    'ttl_until'  => null,
-                    'updated_at' => now(),
-                ]);
+                $admitted[] = ['user_id' => $row->user_id, 'token' => $token];
+            }
+        });
 
-            $admitted[] = ['user_id' => $row->user_id, 'token' => $token];
-        }
-    });
-
-    return response()->json([
-        'message'  => 'Admitted users',
-        'event_id' => $event->id,
-        'count'    => count($admitted),
-        'admitted' => $admitted,
-    ]);
-}
-
+        return response()->json([
+            'message'  => 'Admitted users',
+            'event_id' => $event->id,
+            'count'    => count($admitted),
+            'admitted' => $admitted,
+        ]);
+    }
 }

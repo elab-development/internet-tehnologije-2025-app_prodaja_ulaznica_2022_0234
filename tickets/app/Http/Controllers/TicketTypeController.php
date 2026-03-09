@@ -11,15 +11,16 @@ use Illuminate\Validation\Rule;
 
 class TicketTypeController extends Controller
 {
+    
     public function indexForEvent(Request $request, Event $event)
     {
         $validated = $request->validate([
-            'is_active' => ['sometimes', Rule::in(['0', '1', 0, 1, true, false])],
+            'is_active' => ['sometimes', Rule::in(['0','1',0,1,true,false])],
             'category'  => ['sometimes', 'string', 'max:255'],
             'min_price' => ['sometimes', 'numeric', 'min:0'],
             'max_price' => ['sometimes', 'numeric', 'min:0'],
-            'sort_by'   => ['sometimes', Rule::in(['price', 'name', 'created_at'])],
-            'sort_dir'  => ['sometimes', Rule::in(['asc', 'desc'])],
+            'sort_by'   => ['sometimes', Rule::in(['price','name','created_at'])],
+            'sort_dir'  => ['sometimes', Rule::in(['asc','desc'])],
             'page'      => ['sometimes', 'integer', 'min:1'],
             'per_page'  => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
@@ -30,7 +31,7 @@ class TicketTypeController extends Controller
 
         $query = TicketType::where('event_id', $event->id);
 
-        if (array_key_exists('is_active', $validated)) {
+        if (isset($validated['is_active'])) {
             $query->where('is_active', filter_var($validated['is_active'], FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE) ?? (int)$validated['is_active']);
         }
 
@@ -41,6 +42,7 @@ class TicketTypeController extends Controller
         if (!empty($validated['min_price'])) {
             $query->where('price', '>=', $validated['min_price']);
         }
+
         if (!empty($validated['max_price'])) {
             $query->where('price', '<=', $validated['max_price']);
         }
@@ -50,12 +52,13 @@ class TicketTypeController extends Controller
         $types = $query->paginate($perPage);
 
         if ($types->isEmpty()) {
-            return response()->json('No ticket types found.', 404);
+            return response()->json(['message' => 'No ticket types found.'], 404);
         }
 
         return TicketTypeResource::collection($types);
     }
 
+    
     public function store(Request $request, Event $event)
     {
         if (!Auth::check() || Auth::user()->role !== 'admin') {
@@ -63,18 +66,17 @@ class TicketTypeController extends Controller
         }
 
         $validated = $request->validate([
-            'name'            => ['required', 'string', 'max:255'],
-            'category'        => ['nullable', 'string', 'max:255'],
-            'price'           => ['required', 'numeric', 'min:0'],
-            'quantity_total'  => ['required', 'integer', 'min:1'],
-            'quantity_sold'   => ['sometimes', 'integer', 'min:0'], // najčešće 0 kada se kreira
-            'sales_start_at'  => ['nullable', 'date'],
-            'sales_end_at'    => ['nullable', 'date', 'after_or_equal:sales_start_at'],
-            'is_active'       => ['sometimes', 'boolean'],
+            'name'           => ['required','string','max:255'],
+            'category'       => ['nullable','string','max:255'],
+            'price'          => ['required','numeric','min:0'],
+            'quantity_total' => ['required','integer','min:1'],
+            'quantity_sold'  => ['sometimes','integer','min:0'],
+            'sales_start_at' => ['nullable','date'],
+            'sales_end_at'   => ['nullable','date','after_or_equal:sales_start_at'],
+            'is_active'      => ['sometimes','boolean'],
         ]);
 
-        $payload = array_merge($validated, ['event_id' => $event->id]);
-        $ticketType = TicketType::create($payload);
+        $ticketType = TicketType::create(array_merge($validated, ['event_id' => $event->id]));
 
         return response()->json([
             'message'     => 'Ticket type created successfully',
@@ -91,6 +93,7 @@ class TicketTypeController extends Controller
         ]);
     }
 
+   
     public function update(Request $request, TicketType $ticketType)
     {
         if (!Auth::check() || Auth::user()->role !== 'admin') {
@@ -98,14 +101,14 @@ class TicketTypeController extends Controller
         }
 
         $validated = $request->validate([
-            'name'            => ['sometimes', 'string', 'max:255'],
-            'category'        => ['sometimes', 'nullable', 'string', 'max:255'],
-            'price'           => ['sometimes', 'numeric', 'min:0'],
-            'quantity_total'  => ['sometimes', 'integer', 'min:1'],
-            // quantity_sold se menja transakciono prilikom kupovine — po defaultu ga ne otvaramo kroz update
-            'sales_start_at'  => ['sometimes', 'nullable', 'date'],
-            'sales_end_at'    => ['sometimes', 'nullable', 'date', 'after_or_equal:sales_start_at'],
-            'is_active'       => ['sometimes', 'boolean'],
+            'name'           => ['sometimes','string','max:255'],
+            'category'       => ['sometimes','nullable','string','max:255'],
+            'price'          => ['sometimes','numeric','min:0'],
+            'quantity_total' => ['sometimes','integer','min:1'],
+            // quantity_sold ne otvaramo za update, kontrola je kroz kupovinu
+            'sales_start_at' => ['sometimes','nullable','date'],
+            'sales_end_at'   => ['sometimes','nullable','date','after_or_equal:sales_start_at'],
+            'is_active'      => ['sometimes','boolean'],
         ]);
 
         $ticketType->update($validated);
@@ -116,6 +119,7 @@ class TicketTypeController extends Controller
         ]);
     }
 
+    
     public function destroy(TicketType $ticketType)
     {
         if (!Auth::check() || Auth::user()->role !== 'admin') {

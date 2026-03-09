@@ -33,12 +33,12 @@ class EventController extends Controller
 
         // search
         if (!empty($validated['q'])) {
-            $q = $validated['q'];
+            $q = "%{$validated['q']}%";
             $query->where(function ($w) use ($q) {
-                $w->where('title', 'like', "%{$q}%")
-                    ->orWhere('description', 'like', "%{$q}%")
-                    ->orWhere('venue', 'like', "%{$q}%")
-                    ->orWhere('city', 'like', "%{$q}%");
+                $w->whereRaw('title LIKE ?', [$q])
+                ->orWhereRaw('description LIKE ?', [$q])
+                ->orWhereRaw('venue LIKE ?', [$q])
+                ->orWhereRaw('city LIKE ?', [$q]);
             });
         }
 
@@ -86,8 +86,8 @@ class EventController extends Controller
         'columns'     => ['sometimes', 'integer', 'min:1', 'max:50'],
     ]);
 
-    $rows = $validated['rows'] ?? 10;
-    $columns = $validated['columns'] ?? 10;
+    $rows = min($validated['rows'] ?? 10, 26);
+    $columns = min($validated['columns'] ?? 10, 50);
 
     // 1. Create Event
     $event = Event::create([
