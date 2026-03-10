@@ -13,6 +13,7 @@ use App\Models\Purchase;
 use App\Models\TicketType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
 use Illuminate\Support\Facades\DB;
 
 Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
@@ -140,4 +141,5 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Legacy queue admit (kept for backwards compatibility if needed)
     Route::post('/events/{event}/queue/admit', [PurchaseController::class, 'admitNext']);
+
 });

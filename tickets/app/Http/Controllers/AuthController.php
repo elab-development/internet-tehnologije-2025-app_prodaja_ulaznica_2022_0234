@@ -2,14 +2,48 @@
 
 namespace App\Http\Controllers;
 
+use OpenApi\Attributes as OA;
+
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
+
 class AuthController extends Controller
+
 {
+    #[OA\Post(
+        path: "/api/register",
+        summary: "Register a new user",
+        tags: ["Auth"],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ["name","email","password"],
+                properties: [
+                    new OA\Property(property: "name", type: "string", example: "Jelena"),
+                    new OA\Property(property: "email", type: "string", format: "email", example: "jelena@example.com"),
+                    new OA\Property(property: "password", type: "string", format: "password", example: "secret123"),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Successful registration",
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: "data", type: "object"),
+                        new OA\Property(property: "access_token", type: "string"),
+                        new OA\Property(property: "token_type", type: "string"),
+                    ]
+                )
+            )
+        ]
+    )]
+
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -41,6 +75,39 @@ class AuthController extends Controller
         ], 201); 
     }
 
+    #[OA\Post(
+        path: "/api/login",
+        summary: "Login user",
+        tags: ["Auth"],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ["email","password"],
+                properties: [
+                    new OA\Property(property: "email", type: "string", format: "email", example: "jelena@example.com"),
+                    new OA\Property(property: "password", type: "string", format: "password", example: "secret123"),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Successful login",
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: "message", type: "string"),
+                        new OA\Property(property: "access_token", type: "string"),
+                        new OA\Property(property: "token_type", type: "string"),
+                    ]
+                )
+            ),
+            new OA\Response(
+                response: 401,
+                description: "Invalid credentials"
+            )
+        ]
+    )]
+
     public function login(Request $request)
     {
         // Eksplicitni inputi i validacija su već dovoljni
@@ -60,6 +127,23 @@ class AuthController extends Controller
         ], 200);
     }
 
+    #[OA\Post(
+        path: "/api/logout",
+        summary: "Logout user",
+        tags: ["Auth"],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: "Successful logout",
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: "message", type: "string", example: "You have successfully logged out.")
+                    ]
+                )
+            )
+        ]
+    )]
+    
     public function logout(Request $request)
     {
         $request->user()->tokens()->delete();

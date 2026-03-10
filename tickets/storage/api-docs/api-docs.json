@@ -1,0 +1,1130 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Ticket Sales API",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://127.0.0.1:8000"
+        }
+    ],
+    "paths": {
+        "/api/register": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Register a new user",
+                "operationId": "8a56853624e025573120a09a4c75d468",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Jelena"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "jelena@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "secret123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful registration",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "object"
+                                        },
+                                        "access_token": {
+                                            "type": "string"
+                                        },
+                                        "token_type": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/login": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Login user",
+                "operationId": "a3b306d14572d1f4bd6c064b3233e7b8",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "jelena@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "secret123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful login",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "access_token": {
+                                            "type": "string"
+                                        },
+                                        "token_type": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid credentials"
+                    }
+                }
+            }
+        },
+        "/api/logout": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Logout user",
+                "operationId": "fe8f3429cd6979b3b4517e186505f9f9",
+                "responses": {
+                    "200": {
+                        "description": "Successful logout",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "You have successfully logged out."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/health-check": {
+            "get": {
+                "summary": "Check API Status",
+                "operationId": "e2996dbfbd34faafb04a71e547c09b65",
+                "responses": {
+                    "200": {
+                        "description": "API is functional"
+                    }
+                }
+            }
+        },
+        "/api/events": {
+            "get": {
+                "tags": [
+                    "Events"
+                ],
+                "summary": "Get all events",
+                "description": "Returns paginated list of events with optional filters",
+                "operationId": "7058ab7c89d20c752b6afd6d808f6526",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Search query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "city",
+                        "in": "query",
+                        "description": "Filter by city",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "description": "Start date (Y-m-d)",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "description": "End date (Y-m-d)",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "sort_by",
+                        "in": "query",
+                        "description": "Sort field",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "title",
+                                "start_at",
+                                "created_at"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sort_dir",
+                        "in": "query",
+                        "description": "Sort direction",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Items per page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of events"
+                    },
+                    "404": {
+                        "description": "No events found"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Events"
+                ],
+                "summary": "Create new event",
+                "description": "Admin only - Creates a new event with seats",
+                "operationId": "508895e03d7f10edac84357084c87b20",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "slug",
+                                    "venue",
+                                    "start_at"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Summer Concert"
+                                    },
+                                    "slug": {
+                                        "type": "string",
+                                        "example": "summer-concert-2026"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Amazing summer concert"
+                                    },
+                                    "venue": {
+                                        "type": "string",
+                                        "example": "Arena Belgrade"
+                                    },
+                                    "city": {
+                                        "type": "string",
+                                        "example": "Belgrade"
+                                    },
+                                    "start_at": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2026-07-15 20:00:00"
+                                    },
+                                    "end_at": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2026-07-15 23:00:00"
+                                    },
+                                    "rows": {
+                                        "type": "integer",
+                                        "example": 10
+                                    },
+                                    "columns": {
+                                        "type": "integer",
+                                        "example": 10
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Event created successfully"
+                    },
+                    "403": {
+                        "description": "Only admins can create events"
+                    }
+                }
+            }
+        },
+        "/api/events/{event}": {
+            "get": {
+                "tags": [
+                    "Events"
+                ],
+                "summary": "Get single event",
+                "description": "Returns event details with ticket types",
+                "operationId": "2ee679ce749d46144599318b5ba161f5",
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "description": "Event ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Event details"
+                    },
+                    "404": {
+                        "description": "Event not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Events"
+                ],
+                "summary": "Update event",
+                "description": "Admin only - Updates event details",
+                "operationId": "2e0419cd91b178e7bcffa79a3ebc44d6",
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "description": "Event ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "title": {
+                                        "type": "string"
+                                    },
+                                    "slug": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "venue": {
+                                        "type": "string"
+                                    },
+                                    "city": {
+                                        "type": "string"
+                                    },
+                                    "start_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "end_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Event updated successfully"
+                    },
+                    "403": {
+                        "description": "Only admins can update events"
+                    },
+                    "404": {
+                        "description": "Event not found"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Events"
+                ],
+                "summary": "Delete event",
+                "description": "Admin only - Deletes an event",
+                "operationId": "f4dd0f8b74a8e726ca902d975bb372d8",
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "description": "Event ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Event deleted successfully"
+                    },
+                    "403": {
+                        "description": "Only admins can delete events"
+                    },
+                    "404": {
+                        "description": "Event not found"
+                    }
+                }
+            }
+        },
+        "/api/purchases": {
+            "get": {
+                "tags": [
+                    "Purchases"
+                ],
+                "summary": "Get all purchases for authenticated user",
+                "description": "Returns all purchases for the logged-in user",
+                "operationId": "3e7fda657eab69d8a8f41f202e44a344",
+                "responses": {
+                    "200": {
+                        "description": "List of user purchases"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Purchases"
+                ],
+                "summary": "Create purchase with multiple ticket types",
+                "description": "Creates purchases for multiple ticket types in a single transaction",
+                "operationId": "c5d930515642418b262ea062726e90cf",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "event_id",
+                                    "tickets"
+                                ],
+                                "properties": {
+                                    "event_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "tickets": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "ticket_type_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "quantity": {
+                                                    "type": "integer",
+                                                    "example": 2
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "example": [
+                                            {
+                                                "ticket_type_id": 1,
+                                                "quantity": 2
+                                            },
+                                            {
+                                                "ticket_type_id": 2,
+                                                "quantity": 1
+                                            }
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Purchases created successfully"
+                    },
+                    "400": {
+                        "description": "Not enough tickets or validation error"
+                    }
+                }
+            }
+        },
+        "/api/purchases/{purchase}": {
+            "get": {
+                "tags": [
+                    "Purchases"
+                ],
+                "summary": "Get single purchase",
+                "description": "Returns purchase details for authenticated user",
+                "operationId": "6df95d81052591218d0127db49944326",
+                "parameters": [
+                    {
+                        "name": "purchase",
+                        "in": "path",
+                        "description": "Purchase ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Purchase details"
+                    },
+                    "403": {
+                        "description": "Unauthorized - not your purchase"
+                    },
+                    "404": {
+                        "description": "Purchase not found"
+                    }
+                }
+            }
+        },
+        "/api/events/{event}/purchases/reserve": {
+            "post": {
+                "tags": [
+                    "Purchases"
+                ],
+                "summary": "Reserve tickets for an event",
+                "description": "Creates a pending purchase reservation",
+                "operationId": "f2721cd96ea47710e56a5431a3295d2f",
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "description": "Event ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "ticket_type_id",
+                                    "quantity"
+                                ],
+                                "properties": {
+                                    "ticket_type_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "quantity": {
+                                        "type": "integer",
+                                        "example": 2
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Reservation created"
+                    },
+                    "400": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/purchases/{purchase}/pay": {
+            "post": {
+                "tags": [
+                    "Purchases"
+                ],
+                "summary": "Pay for a purchase",
+                "description": "Marks a pending purchase as completed",
+                "operationId": "563085dc972400de3cec4f8fafee7c50",
+                "parameters": [
+                    {
+                        "name": "purchase",
+                        "in": "path",
+                        "description": "Purchase ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payment successful"
+                    },
+                    "400": {
+                        "description": "Cannot pay for this purchase"
+                    }
+                }
+            }
+        },
+        "/api/purchases/{purchase}/cancel": {
+            "post": {
+                "tags": [
+                    "Purchases"
+                ],
+                "summary": "Cancel a purchase",
+                "description": "Cancels a pending purchase",
+                "operationId": "e99e1eb389546a897f64282c3a4bfc12",
+                "parameters": [
+                    {
+                        "name": "purchase",
+                        "in": "path",
+                        "description": "Purchase ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Purchase cancelled"
+                    },
+                    "400": {
+                        "description": "Cannot cancel a completed purchase"
+                    }
+                }
+            }
+        },
+        "/api/events/{event}/queue/join": {
+            "put": {
+                "tags": [
+                    "Queue"
+                ],
+                "summary": "Join queue for an event",
+                "description": "Adds user to waiting queue (legacy endpoint)",
+                "operationId": "8fc97858273b5134beebd428f59ff6a0",
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "description": "Event ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "ticket_type_id"
+                                ],
+                                "properties": {
+                                    "ticket_type_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Joined queue successfully"
+                    }
+                }
+            }
+        },
+        "/api/events/{event}/queue/status": {
+            "get": {
+                "tags": [
+                    "Queue"
+                ],
+                "summary": "Get queue status",
+                "description": "Returns user's position in queue (legacy endpoint)",
+                "operationId": "54b14adcf5648ac1f538cb5a62e5fc17",
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "description": "Event ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Queue status"
+                    }
+                }
+            }
+        },
+        "/api/events/{event}/queue/admit": {
+            "post": {
+                "tags": [
+                    "Queue"
+                ],
+                "summary": "Admit users from queue",
+                "description": "Admin only - Admits next users from waiting queue",
+                "operationId": "4adb883561dca2aeddd0ae2cd59f2ee2",
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "description": "Event ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "count": {
+                                        "description": "Number of users to admit (default 50, max 2000)",
+                                        "type": "integer",
+                                        "example": 50
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Users admitted successfully"
+                    },
+                    "403": {
+                        "description": "Admin access required"
+                    }
+                }
+            }
+        },
+        "/api/events/{event}/ticket-types": {
+            "get": {
+                "tags": [
+                    "Ticket Types"
+                ],
+                "summary": "Get ticket types for an event",
+                "description": "Returns paginated list of ticket types with optional filters",
+                "operationId": "998281a1a61c1b697f15eda0a48b2b81",
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "description": "Event ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "is_active",
+                        "in": "query",
+                        "description": "Filter by active status",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "category",
+                        "in": "query",
+                        "description": "Filter by category",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "min_price",
+                        "in": "query",
+                        "description": "Minimum price",
+                        "schema": {
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "name": "max_price",
+                        "in": "query",
+                        "description": "Maximum price",
+                        "schema": {
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "name": "sort_by",
+                        "in": "query",
+                        "description": "Sort field",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "price",
+                                "name",
+                                "created_at"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sort_dir",
+                        "in": "query",
+                        "description": "Sort direction",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Items per page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of ticket types"
+                    },
+                    "404": {
+                        "description": "No ticket types found"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Ticket Types"
+                ],
+                "summary": "Create ticket type",
+                "description": "Admin only - Creates a new ticket type for an event",
+                "operationId": "11fc870f0725b0eeb0caaf9db1c2dd66",
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "description": "Event ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "price",
+                                    "quantity_total"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "VIP"
+                                    },
+                                    "category": {
+                                        "type": "string",
+                                        "example": "Premium"
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "example": 5000
+                                    },
+                                    "quantity_total": {
+                                        "type": "integer",
+                                        "example": 100
+                                    },
+                                    "quantity_sold": {
+                                        "type": "integer",
+                                        "example": 0
+                                    },
+                                    "sales_start_at": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2026-06-01 10:00:00"
+                                    },
+                                    "sales_end_at": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2026-07-15 18:00:00"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Ticket type created successfully"
+                    },
+                    "403": {
+                        "description": "Only admins can create ticket types"
+                    }
+                }
+            }
+        },
+        "/api/ticket-types/{ticketType}": {
+            "get": {
+                "tags": [
+                    "Ticket Types"
+                ],
+                "summary": "Get single ticket type",
+                "description": "Returns ticket type details with event",
+                "operationId": "ffbf717fc37111e97d7dd941f1d28b7f",
+                "parameters": [
+                    {
+                        "name": "ticketType",
+                        "in": "path",
+                        "description": "Ticket Type ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ticket type details"
+                    },
+                    "404": {
+                        "description": "Ticket type not found"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Ticket Types"
+                ],
+                "summary": "Update ticket type",
+                "description": "Admin only - Updates ticket type details",
+                "operationId": "c81d7706b9abe5413cc0cef6e8e1af1d",
+                "parameters": [
+                    {
+                        "name": "ticketType",
+                        "in": "path",
+                        "description": "Ticket Type ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "category": {
+                                        "type": "string"
+                                    },
+                                    "price": {
+                                        "type": "number"
+                                    },
+                                    "quantity_total": {
+                                        "type": "integer"
+                                    },
+                                    "sales_start_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "sales_end_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Ticket type updated successfully"
+                    },
+                    "403": {
+                        "description": "Only admins can update ticket types"
+                    },
+                    "404": {
+                        "description": "Ticket type not found"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Ticket Types"
+                ],
+                "summary": "Delete ticket type",
+                "description": "Admin only - Deletes a ticket type",
+                "operationId": "8a959a2b5655b6123e28ddf213f90ebf",
+                "parameters": [
+                    {
+                        "name": "ticketType",
+                        "in": "path",
+                        "description": "Ticket Type ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ticket type deleted successfully"
+                    },
+                    "403": {
+                        "description": "Only admins can delete ticket types"
+                    },
+                    "404": {
+                        "description": "Ticket type not found"
+                    }
+                }
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Auth",
+            "description": "Auth"
+        },
+        {
+            "name": "Events",
+            "description": "Events"
+        },
+        {
+            "name": "Purchases",
+            "description": "Purchases"
+        },
+        {
+            "name": "Queue",
+            "description": "Queue"
+        },
+        {
+            "name": "Ticket Types",
+            "description": "Ticket Types"
+        }
+    ]
+}
