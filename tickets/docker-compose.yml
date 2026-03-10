@@ -1,0 +1,51 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: laravel_app
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+    networks:
+      - tickets_network
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+
+  db:
+    image: mysql:8.0
+    container_name: mysql_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: prodaja_ulaznica
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: password
+    volumes:
+      - dbdata:/var/lib/mysql
+    networks:
+      - tickets_network
+    ports:
+      - "3307:3306"
+
+  webserver:
+    image: nginx:alpine
+    container_name: tickets_webserver
+    volumes:
+      - ./:/var/www
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    ports:
+      - "80:80"
+    networks:
+      - tickets_network
+    depends_on:
+      - app
+
+volumes:
+  dbdata:
+
+networks:
+  tickets_network:
+    driver: bridge
