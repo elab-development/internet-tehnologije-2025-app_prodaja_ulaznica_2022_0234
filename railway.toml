@@ -1,0 +1,7 @@
+[build]
+builder = "nixpacks"
+buildCommand = "cd tickets && composer install --no-dev --optimize-autoloader"
+
+[deploy]
+startCommand = "cd tickets && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT"
+restartPolicyType = "on_failure"
