@@ -16,9 +16,12 @@ use Illuminate\Support\Facades\Route;
 
 use Illuminate\Support\Facades\DB;
 
+
+
 Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
     return $request->user();
 });
+
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -141,5 +144,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Legacy queue admit (kept for backwards compatibility if needed)
     Route::post('/events/{event}/queue/admit', [PurchaseController::class, 'admitNext']);
+
+    Route::get('/events/{event}/weather', [App\Http\Controllers\EventController::class, 'weather']);
 
 });

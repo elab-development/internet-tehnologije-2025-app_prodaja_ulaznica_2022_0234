@@ -10,11 +10,88 @@ use App\Models\Seat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 
 
 class EventController extends Controller
 {
+        #[OA\Get(
+        path: "/api/events/{event}/weather",
+         tags: ["Events"],
+         summary: "Get weather forecast for event",
+         description: "Returns weather data for the event location",
+         parameters: [
+           new OA\Parameter(
+            name: "event",
+            in: "path",
+            required: true,
+            description: "Event ID",
+            schema: new OA\Schema(type: "integer")
+            )
+            ],
+         responses: [
+        new OA\Response(response: 200, description: "Weather data"),
+        new OA\Response(response: 404, description: "Weather data not available")
+         ]
+    )]
+    public function weather(Event $event): JsonResponse
+{
+    Log::info("Weather method called for event: " . $event->id);
+    Log::info("Event city: " . $event->city);
+    
+    if (!$event->city) {
+        Log::info("No city specified");
+        return response()->json(['message' => 'City not specified for this event'], 400);
+    }
+
+    try {
+        Log::info("Calling Weather API for: " . $event->city);
+        
+        $response = Http::get('https://api.openweathermap.org/data/2.5/weather', [
+            'q' => $event->city . ',RS',
+            'appid' => env('WEATHER_API_KEY'),
+            'units' => 'metric',
+            'lang' => 'sr'
+        ]);
+
+        Log::info("Weather API response status: " . $response->status());
+        Log::info("Weather API response body: " . $response->body());
+
+        if ($response->successful()) {
+            $data = $response->json();
+
+            return response()->json([
+                'event' => [
+                    'title' => $event->title,
+                    'city' => $event->city,
+                    'date' => $event->start_at->format('d M Y, H:i'),
+                ],
+                'weather' => [
+                    'temperature' => $data['main']['temp'] ?? null,
+                    'feels_like' => $data['main']['feels_like'] ?? null,
+                    'description' => $data['weather'][0]['description'] ?? null,
+                    'humidity' => $data['main']['humidity'] ?? null,
+                    'wind_speed' => $data['wind']['speed'] ?? null,
+                    'icon' => $data['weather'][0]['icon'] ?? null,
+                ],
+                'source' => 'OpenWeatherMap API'
+            ]);
+        }
+
+        return response()->json(['message' => 'Weather data not available'], 404);
+
+    } catch (\Exception $e) {
+        Log::error('Weather API failed: ' . $e->getMessage());
+        return response()->json([
+            'message' => 'Failed to fetch weather data',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
        #[OA\Get(
         path: "/api/events",
         tags: ["Events"],
@@ -300,4 +377,7 @@ class EventController extends Controller
 
         return response()->json(['message' => 'Event deleted successfully']);
     }
+
+    
+
 }

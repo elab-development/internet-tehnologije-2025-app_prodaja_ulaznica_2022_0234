@@ -12,6 +12,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;  
+use Illuminate\Support\Facades\Storage; 
+
+
 
 class PurchaseController extends Controller
 {
@@ -238,12 +242,57 @@ class PurchaseController extends Controller
     public function pay(Purchase $purchase): JsonResponse
     {
         if ($purchase->status !== 'pending') {
-            return response()->json(['message' => 'Cannot pay for this purchase'], 400);
+        return response()->json(['message' => 'Cannot pay for this purchase'], 400);
+    }
+
+    $purchase->update(['status' => 'paid']);
+
+    try {
+        
+        $qrData = json_encode([
+            'purchase_id' => $purchase->id,
+            'event' => $purchase->event->title,
+            'user' => $purchase->user->email,
+            'quantity' => $purchase->quantity,
+            'date' => now()->toDateTimeString(),
+        ]);
+
+        
+        $response = Http::get('https://api.qrserver.com/v1/create-qr-code/', [
+            'data' => $qrData,
+            'size' => '300x300',
+            'format' => 'png',
+        ]);
+
+        Log::info("QR API Response Status: " . $response->status());
+        Log::info("QR API Response Body Size: " . strlen($response->body()) . " bytes");
+        Log::info("Response successful: " . ($response->successful() ? 'YES' : 'NO'));
+
+        if ($response->successful()) {
+            $qrPath = "qrcodes/purchase-{$purchase->id}.png";
+            
+           
+            Log::info("Attempting to save QR code to: " . $qrPath);
+            
+            Storage::put($qrPath, $response->body());
+            
+            Log::info("QR code saved successfully");
+            Log::info("File exists: " . (Storage::exists($qrPath) ? 'YES' : 'NO'));
+            Log::info("Full path: " . storage_path('app/' . $qrPath));
+            
+
+            $purchase->update(['qr_code_path' => $qrPath]);
         }
 
-        $purchase->update(['status' => 'completed']);
+    } catch (\Exception $e) {
+        Log::error('QR Code generation failed: ' . $e->getMessage());
+    }
 
-        return response()->json($purchase);
+    return response()->json([
+        'message' => 'Payment successful',
+        'purchase' => $purchase,
+        'qr_code_url' => isset($qrPath) ? asset('storage/' . $qrPath) : null,
+    ]);
     }
 
     #[OA\Post(

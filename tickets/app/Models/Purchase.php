@@ -18,6 +18,7 @@ class Purchase extends Model
         'total_amount',
         'status',
         'reserved_until',
+        'qr_code_path',
     ];
 
     protected $casts = [
