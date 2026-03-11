@@ -37,6 +37,8 @@ class EventController extends Controller
         new OA\Response(response: 404, description: "Weather data not available")
          ]
     )]
+
+    
     public function weather(Event $event): JsonResponse
 {
     Log::info("Weather method called for event: " . $event->id);
