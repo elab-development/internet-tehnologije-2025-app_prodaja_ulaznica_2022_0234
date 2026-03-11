@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
-import Input from '../Components/Form/Input';
+import Input from '../Components/form/Input';
 import { handleApiError } from '../utils/ErrorHandler';
 
 const Login: React.FC = () => {
@@ -54,8 +54,8 @@ const Login: React.FC = () => {
     if (!formData.password) {
       newErrors.password = 'Lozinka je obavezna';
       hasErrors = true;
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Lozinka mora imati najmanje 6 karaktera';
+    } else if (formData.password.length < 5) {
+      newErrors.password = 'Lozinka mora imati najmanje 5 karaktera';
       hasErrors = true;
     }
 
