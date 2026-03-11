@@ -270,18 +270,17 @@ class PurchaseController extends Controller
 
         if ($response->successful()) {
             $qrPath = "qrcodes/purchase-{$purchase->id}.png";
-            
-           
-            Log::info("Attempting to save QR code to: " . $qrPath);
-            
-            Storage::put($qrPath, $response->body());
-            
-            Log::info("QR code saved successfully");
-            Log::info("File exists: " . (Storage::exists($qrPath) ? 'YES' : 'NO'));
-            Log::info("Full path: " . storage_path('app/' . $qrPath));
-            
-
-            $purchase->update(['qr_code_path' => $qrPath]);
+             $fullPath = storage_path('app/' . $qrPath);
+    
+             
+             if (!file_exists(dirname($fullPath))) {
+              mkdir(dirname($fullPath), 0755, true);
+                 }
+    
+            file_put_contents($fullPath, $response->body());
+    
+            Log::info("QR code saved to: " . $fullPath);
+            Log::info("File size: " . filesize($fullPath) . " bytes");
         }
 
     } catch (\Exception $e) {

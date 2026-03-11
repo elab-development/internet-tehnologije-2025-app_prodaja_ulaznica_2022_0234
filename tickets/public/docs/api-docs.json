@@ -161,7 +161,46 @@
                 }
             }
         },
-        
+        "/api/health-check": {
+            "get": {
+                "summary": "Check API Status",
+                "operationId": "e2996dbfbd34faafb04a71e547c09b65",
+                "responses": {
+                    "200": {
+                        "description": "API is functional"
+                    }
+                }
+            }
+        },
+        "/api/events/{event}/weather": {
+            "get": {
+                "tags": [
+                    "Events"
+                ],
+                "summary": "Get weather forecast for event",
+                "description": "Returns weather data for the event location",
+                "operationId": "1ff32ce13cc44cff9521a785a9e37717",
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "description": "Event ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Weather data"
+                    },
+                    "404": {
+                        "description": "Weather data not available"
+                    }
+                }
+            }
+        },
         "/api/events": {
             "get": {
                 "tags": [
@@ -889,84 +928,6 @@
                     },
                     "404": {
                         "description": "No ticket types found"
-                    }
-                }
-            },
-            "post": {
-                "tags": [
-                    "Ticket Types"
-                ],
-                "summary": "Create ticket type",
-                "description": "Admin only - Creates a new ticket type for an event",
-                "operationId": "11fc870f0725b0eeb0caaf9db1c2dd66",
-                "parameters": [
-                    {
-                        "name": "event",
-                        "in": "path",
-                        "description": "Event ID",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "name",
-                                    "price",
-                                    "quantity_total"
-                                ],
-                                "properties": {
-                                    "name": {
-                                        "type": "string",
-                                        "example": "VIP"
-                                    },
-                                    "category": {
-                                        "type": "string",
-                                        "example": "Premium"
-                                    },
-                                    "price": {
-                                        "type": "number",
-                                        "example": 5000
-                                    },
-                                    "quantity_total": {
-                                        "type": "integer",
-                                        "example": 100
-                                    },
-                                    "quantity_sold": {
-                                        "type": "integer",
-                                        "example": 0
-                                    },
-                                    "sales_start_at": {
-                                        "type": "string",
-                                        "format": "date-time",
-                                        "example": "2026-06-01 10:00:00"
-                                    },
-                                    "sales_end_at": {
-                                        "type": "string",
-                                        "format": "date-time",
-                                        "example": "2026-07-15 18:00:00"
-                                    },
-                                    "is_active": {
-                                        "type": "boolean",
-                                        "example": true
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Ticket type created successfully"
-                    },
-                    "403": {
-                        "description": "Only admins can create ticket types"
                     }
                 }
             }
