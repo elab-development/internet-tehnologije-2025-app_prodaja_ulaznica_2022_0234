@@ -1,60 +1,69 @@
 services:
-  database:
+  mysql:
     image: mysql:8.0
-    container_name: tickets-db
-    restart: unless-stopped
+    container_name: mysql
     environment:
-      MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: tickets_db
-      MYSQL_USER: tickets_user
-      MYSQL_PASSWORD: secret_password
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: prodaja_ulaznica
     ports:
       - "3307:3306"
     volumes:
-      - db-data:/var/lib/mysql
-    networks:
-      - tickets-network
+      - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 5s
+      test: ["CMD", "mysqladmin", "ping", "-prootpass"]
+      interval: 5s
       retries: 10
 
-  backend:
-    build: ./tickets
-    container_name: tickets-backend
-    restart: unless-stopped
-    ports:
-      - "8000:8080"
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: phpmyadmin
     environment:
-      - DB_HOST=database
-      - DB_PORT=3306
-      - DB_DATABASE=tickets_db
-      - DB_USERNAME=tickets_user
-      - DB_PASSWORD=secret_password
-      - APP_ENV=local
-      - APP_DEBUG=true
-      - PORT=8080
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: rootpass
+    ports:
+      - "8080:80"
     depends_on:
-      database:
+      mysql:
         condition: service_healthy
-    networks:
-      - tickets-network
+
+  backend:
+    build:
+      context: ./tickets
+    container_name: backend
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      APP_KEY: ${APP_KEY:-base64:8R8v2Q2f7g0L4mM0v6p9X8s2r5T1u3W0y7K4n6B9c2A=}
+      CACHE_STORE: file
+      SESSION_DRIVER: file
+      QUEUE_CONNECTION: sync
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: prodaja_ulaznica
+      DB_USERNAME: root
+      DB_PASSWORD: rootpass
+      FRONTEND_URL: http://localhost:3000
+    command: >-
+      sh -c "php artisan migrate --force &&
+      php artisan serve --host=0.0.0.0 --port=8000"
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
 
   frontend:
-    build: ./frontend
-    container_name: tickets-frontend
-    restart: unless-stopped
+    build:
+      context: ./frontend
+    container_name: frontend
     ports:
       - "3000:80"
     depends_on:
       - backend
-    networks:
-      - tickets-network
 
 volumes:
-  db-data:
-    driver: local
-
-networks:
-  tickets-network:
-    driver: bridge
+  mysql_data:

@@ -2,34 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use OpenApi\Attributes as OA;
-
 use App\Models\Purchase;
 use App\Models\Event;
-use App\Models\TicketType;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Http;  
-use Illuminate\Support\Facades\Storage; 
-
-
+use Illuminate\Support\Str;
+use App\Models\TicketType;
 
 class PurchaseController extends Controller
 {
-        #[OA\Get(
-        path: "/api/purchases",
-        tags: ["Purchases"],
-        summary: "Get all purchases for authenticated user",
-        description: "Returns all purchases for the logged-in user",
-        responses: [
-            new OA\Response(response: 200, description: "List of user purchases"),
-            new OA\Response(response: 401, description: "Unauthenticated")
-        ]
-    )]
-
+    /**
+     * Get all purchases for authenticated user
+     */
     public function index(Request $request): JsonResponse
     {
         $purchases = Purchase::where('user_id', Auth::id())
@@ -39,27 +25,9 @@ class PurchaseController extends Controller
         return response()->json($purchases);
     }
 
-    #[OA\Get(
-        path: "/api/purchases/{purchase}",
-        tags: ["Purchases"],
-        summary: "Get single purchase",
-        description: "Returns purchase details for authenticated user",
-        parameters: [
-            new OA\Parameter(
-                name: "purchase",
-                in: "path",
-                required: true,
-                description: "Purchase ID",
-                schema: new OA\Schema(type: "integer")
-            )
-        ],
-        responses: [
-            new OA\Response(response: 200, description: "Purchase details"),
-            new OA\Response(response: 403, description: "Unauthorized - not your purchase"),
-            new OA\Response(response: 404, description: "Purchase not found")
-        ]
-    )]
-
+    /**
+     * Get a specific purchase
+     */
     public function show(Purchase $purchase): JsonResponse
     {
         if ($purchase->user_id !== Auth::id()) {
@@ -69,355 +37,178 @@ class PurchaseController extends Controller
         return response()->json($purchase->load(['event', 'ticketType']));
     }
 
-    #[OA\Post(
-        path: "/api/events/{event}/purchases/reserve",
-        tags: ["Purchases"],
-        summary: "Reserve tickets for an event",
-        description: "Creates a pending purchase reservation",
-        parameters: [
-            new OA\Parameter(
-                name: "event",
-                in: "path",
-                required: true,
-                description: "Event ID",
-                schema: new OA\Schema(type: "integer")
-            )
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ["ticket_type_id", "quantity"],
-                properties: [
-                    new OA\Property(property: "ticket_type_id", type: "integer", example: 1),
-                    new OA\Property(property: "quantity", type: "integer", example: 2),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 201, description: "Reservation created"),
-            new OA\Response(response: 400, description: "Validation error")
-        ]
-    )]
-
+    /**
+     * Reserve tickets for an event
+     */
     public function reserve(Request $request, Event $event): JsonResponse
     {
         $validated = $request->validate([
             'ticket_type_id' => 'required|exists:ticket_types,id',
-            'quantity'       => 'required|integer|min:1|max:10',
+            'quantity' => 'required|integer|min:1',
         ]);
 
-        $ticketType = TicketType::where('id', $validated['ticket_type_id'])
-            ->where('event_id', $event->id)
-            ->lockForUpdate()
-            ->firstOrFail();
-
-        $available = $ticketType->quantity_total - $ticketType->quantity_sold;
-        if ($available < $validated['quantity']) {
-            return response()->json(['message' => 'Not enough tickets available'], 400);
-        }
-
-        $ticketType->increment('quantity_sold', $validated['quantity']);
-
         $purchase = Purchase::create([
-            'user_id'        => Auth::id(),
-            'event_id'       => $event->id,
-            'ticket_type_id' => $ticketType->id,
-            'quantity'       => $validated['quantity'],
-            'unit_price'     => $ticketType->price,
-            'total_amount'   => $ticketType->price * $validated['quantity'],
-            'status'         => 'pending',
+            'user_id' => Auth::id(),
+            'event_id' => $event->id,
+            'ticket_type_id' => $validated['ticket_type_id'],
+            'quantity' => $validated['quantity'],
+            'status' => 'pending',
         ]);
 
         return response()->json($purchase, 201);
     }
 
-    #[OA\Post(
-        path: "/api/purchases",
-        tags: ["Purchases"],
-        summary: "Create purchase with multiple ticket types",
-        description: "Creates purchases for multiple ticket types in a single transaction",
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ["event_id", "tickets"],
-                properties: [
-                    new OA\Property(property: "event_id", type: "integer", example: 1),
-                    new OA\Property(
-                        property: "tickets",
-                        type: "array",
-                        items: new OA\Items(
-                            properties: [
-                                new OA\Property(property: "ticket_type_id", type: "integer", example: 1),
-                                new OA\Property(property: "quantity", type: "integer", example: 2)
-                            ]
-                        ),
-                        example: [
-                            ["ticket_type_id" => 1, "quantity" => 2],
-                            ["ticket_type_id" => 2, "quantity" => 1]
-                        ]
-                    ),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 201, description: "Purchases created successfully"),
-            new OA\Response(response: 400, description: "Not enough tickets or validation error")
-        ]
-    )]
-
+    /**
+     * Create purchases for multiple ticket types (used by frontend)
+     * Expects: { event_id: number, tickets: [{ ticket_type_id, quantity }, ...] }
+     */
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'event_id'        => 'required|exists:events,id',
-            'tickets'         => 'required|array|min:1',
+            'event_id' => 'required|exists:events,id',
+            'tickets' => 'required|array|min:1',
             'tickets.*.ticket_type_id' => 'required|exists:ticket_types,id',
-            'tickets.*.quantity'       => 'required|integer|min:1|max:10',
+            'tickets.*.quantity' => 'required|integer|min:1|max:10',
         ]);
 
         $userId = Auth::id();
         $eventId = $validated['event_id'];
+        $firstPurchaseId = null;
 
         try {
-            $firstPurchaseId = DB::transaction(function () use ($validated, $userId, $eventId) {
-                $firstId = null;
-
+            $result = DB::transaction(function () use ($validated, $userId, $eventId, &$firstPurchaseId) {
                 foreach ($validated['tickets'] as $t) {
-                    $ticketType = TicketType::where('id', $t['ticket_type_id'])
-                        ->where('event_id', $eventId)
-                        ->lockForUpdate()
-                        ->firstOrFail();
+                    // lock the ticket type row to avoid race conditions
+                    $ticketType = TicketType::where('id', $t['ticket_type_id'])->lockForUpdate()->firstOrFail();
+
+                    if ($ticketType->event_id != $eventId) {
+                        throw new \Exception('Ticket type does not belong to specified event');
+                    }
 
                     $available = $ticketType->quantity_total - $ticketType->quantity_sold;
                     if ($available < $t['quantity']) {
-                        throw new \Exception('Not enough tickets for: ' . $ticketType->name);
+                        throw new \Exception('Not enough tickets available for: ' . $ticketType->name);
                     }
 
-                    $ticketType->increment('quantity_sold', $t['quantity']);
+                    // reserve by incrementing quantity_sold
+                    $ticketType->quantity_sold = $ticketType->quantity_sold + $t['quantity'];
+                    $ticketType->save();
 
                     $purchase = Purchase::create([
-                        'user_id'        => $userId,
-                        'event_id'       => $eventId,
+                        'user_id' => $userId,
+                        'event_id' => $eventId,
                         'ticket_type_id' => $ticketType->id,
-                        'quantity'       => $t['quantity'],
-                        'unit_price'     => $ticketType->price,
-                        'total_amount'   => $ticketType->price * $t['quantity'],
-                        'status'         => 'pending',
+                        'quantity' => $t['quantity'],
+                        'unit_price' => $ticketType->price,
+                        'total_amount' => $ticketType->price * $t['quantity'],
+                        'status' => 'pending',
                     ]);
 
-                    if (!$firstId) {
-                        $firstId = $purchase->id;
+                    if (!$firstPurchaseId) {
+                        $firstPurchaseId = $purchase->id;
                     }
                 }
 
-                return $firstId;
+                return $firstPurchaseId;
             });
 
-            return response()->json(['purchase_id' => $firstPurchaseId], 201);
+            return response()->json(['purchase_id' => $result], 201);
         } catch (\Exception $e) {
-            Log::error($e->getMessage());
-            return response()->json(['message' => 'Could not create purchase'], 400);
+            return response()->json(['message' => $e->getMessage()], 400);
         }
     }
 
-    #[OA\Post(
-        path: "/api/purchases/{purchase}/pay",
-        tags: ["Purchases"],
-        summary: "Pay for a purchase",
-        description: "Marks a pending purchase as completed",
-        parameters: [
-            new OA\Parameter(
-                name: "purchase",
-                in: "path",
-                required: true,
-                description: "Purchase ID",
-                schema: new OA\Schema(type: "integer")
-            )
-        ],
-        responses: [
-            new OA\Response(response: 200, description: "Payment successful"),
-            new OA\Response(response: 400, description: "Cannot pay for this purchase")
-        ]
-    )]
-
+    /**
+     * Pay for a purchase
+     */
     public function pay(Purchase $purchase): JsonResponse
     {
+        if ($purchase->user_id !== Auth::id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
         if ($purchase->status !== 'pending') {
-        return response()->json(['message' => 'Cannot pay for this purchase'], 400);
-    }
-
-    $purchase->update(['status' => 'paid']);
-
-    try {
-        
-        $qrData = json_encode([
-            'purchase_id' => $purchase->id,
-            'event' => $purchase->event->title,
-            'user' => $purchase->user->email,
-            'quantity' => $purchase->quantity,
-            'date' => now()->toDateTimeString(),
-        ]);
-
-        
-        $response = Http::get('https://api.qrserver.com/v1/create-qr-code/', [
-            'data' => $qrData,
-            'size' => '300x300',
-            'format' => 'png',
-        ]);
-
-        Log::info("QR API Response Status: " . $response->status());
-        Log::info("QR API Response Body Size: " . strlen($response->body()) . " bytes");
-        Log::info("Response successful: " . ($response->successful() ? 'YES' : 'NO'));
-
-        if ($response->successful()) {
-            $qrPath = "qrcodes/purchase-{$purchase->id}.png";
-             $fullPath = storage_path('app/' . $qrPath);
-    
-             
-             if (!file_exists(dirname($fullPath))) {
-              mkdir(dirname($fullPath), 0755, true);
-                 }
-    
-            file_put_contents($fullPath, $response->body());
-    
-            Log::info("QR code saved to: " . $fullPath);
-            Log::info("File size: " . filesize($fullPath) . " bytes");
+            return response()->json(['message' => 'Cannot pay for this purchase'], 400);
         }
 
-    } catch (\Exception $e) {
-        Log::error('QR Code generation failed: ' . $e->getMessage());
-    }
-
-    return response()->json([
-        'message' => 'Payment successful',
-        'purchase' => $purchase,
-        'qr_code_url' => isset($qrPath) ? asset('storage/' . $qrPath) : null,
-    ]);
-    }
-
-    #[OA\Post(
-        path: "/api/purchases/{purchase}/cancel",
-        tags: ["Purchases"],
-        summary: "Cancel a purchase",
-        description: "Cancels a pending purchase",
-        parameters: [
-            new OA\Parameter(
-                name: "purchase",
-                in: "path",
-                required: true,
-                description: "Purchase ID",
-                schema: new OA\Schema(type: "integer")
-            )
-        ],
-        responses: [
-            new OA\Response(response: 200, description: "Purchase cancelled"),
-            new OA\Response(response: 400, description: "Cannot cancel a completed purchase")
-        ]
-    )]
-    public function cancel(Purchase $purchase): JsonResponse
-    {
-        if ($purchase->status === 'completed') {
-            return response()->json(['message' => 'Cannot cancel a completed purchase'], 400);
-        }
-
-        $purchase->update(['status' => 'cancelled']);
+        DB::transaction(function () use ($purchase) {
+            $purchase->update(['status' => 'paid']);
+            $purchase->tickets()->update(['status' => 'sold']);
+            $purchase->tickets()->with('seat')->get()->each(function ($ticket) {
+                $ticket->seat?->update(['status' => 'sold']);
+            });
+            $purchase->payment()->create([
+                'amount' => $purchase->total_amount,
+                'status' => 'completed',
+                'payment_method' => 'demo',
+                'transaction_id' => (string) Str::uuid(),
+                'response_data' => ['provider' => 'demo'],
+            ]);
+        });
 
         return response()->json($purchase);
     }
 
-    #[OA\Put(
-        path: "/api/events/{event}/queue/join",
-        tags: ["Queue"],
-        summary: "Join queue for an event",
-        description: "Adds user to waiting queue (legacy endpoint)",
-        parameters: [
-            new OA\Parameter(
-                name: "event",
-                in: "path",
-                required: true,
-                description: "Event ID",
-                schema: new OA\Schema(type: "integer")
-            )
-        ],
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ["ticket_type_id"],
-                properties: [
-                    new OA\Property(property: "ticket_type_id", type: "integer", example: 1),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 200, description: "Joined queue successfully")
-        ]
-    )]
+    /**
+     * Cancel a purchase
+     */
+    public function cancel(Purchase $purchase): JsonResponse
+    {
+        if ($purchase->user_id !== Auth::id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        if (in_array($purchase->status, ['paid', 'completed'], true)) {
+            return response()->json(['message' => 'Cannot cancel a paid purchase'], 400);
+        }
+
+        DB::transaction(function () use ($purchase) {
+            $purchase->update(['status' => 'cancelled']);
+            $purchase->ticketType()->decrement('quantity_sold', $purchase->quantity);
+            $purchase->tickets()->whereIn('status', ['reserved', 'sold'])->update(['status' => 'available']);
+            $purchase->tickets()->with('seat')->get()->each(function ($ticket) {
+                $ticket->seat?->update(['status' => 'available']);
+            });
+        });
+
+        return response()->json($purchase);
+    }
+
+    /**
+     * Join queue for an event (legacy)
+     */
     public function joinQueue(Request $request, Event $event): JsonResponse
     {
         $validated = $request->validate([
             'ticket_type_id' => 'required|exists:ticket_types,id',
         ]);
 
+        // Implementation for queue logic
         return response()->json(['message' => 'Joined queue'], 200);
     }
 
-    #[OA\Get(
-        path: "/api/events/{event}/queue/status",
-        tags: ["Queue"],
-        summary: "Get queue status",
-        description: "Returns user's position in queue (legacy endpoint)",
-        parameters: [
-            new OA\Parameter(
-                name: "event",
-                in: "path",
-                required: true,
-                description: "Event ID",
-                schema: new OA\Schema(type: "integer")
-            )
-        ],
-        responses: [
-            new OA\Response(response: 200, description: "Queue status")
-        ]
-    )]
-
+    /**
+     * Get queue status (legacy)
+     */
     public function queueStatus(Event $event): JsonResponse
     {
         // Implementation for queue status
         return response()->json(['position' => null], 200);
     }
 
-    #[OA\Post(
-        path: "/api/events/{event}/queue/admit",
-        tags: ["Queue"],
-        summary: "Admit users from queue",
-        description: "Admin only - Admits next users from waiting queue",
-        parameters: [
-            new OA\Parameter(
-                name: "event",
-                in: "path",
-                required: true,
-                description: "Event ID",
-                schema: new OA\Schema(type: "integer")
-            )
-        ],
-        requestBody: new OA\RequestBody(
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: "count", type: "integer", example: 50, description: "Number of users to admit (default 50, max 2000)"),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 200, description: "Users admitted successfully"),
-            new OA\Response(response: 403, description: "Admin access required")
-        ]
-    )]
+    /**
+     * Admit next person from queue (admin)
+     */
     public function admitNext(Request $request, Event $event): JsonResponse
     {
-        $validated = $request->validate([
-            'count' => ['sometimes', 'integer', 'min:1', 'max:2000'],
+        $data = $request->validate([
+            'count'       => ['sometimes', 'integer', 'min:1', 'max:2000'],
+
         ]);
 
-        $count = $validated['count'] ?? 50;
+        $count = $data['count'] ?? 50;
+
+
         $admitted = [];
 
         DB::transaction(function () use ($event, $count, &$admitted) {
@@ -430,7 +221,8 @@ class PurchaseController extends Controller
                 ->get();
 
             foreach ($rows as $row) {
-                $token = \Illuminate\Support\Str::random(32);
+                $token    = \Illuminate\Support\Str::random(32);
+
 
                 DB::table('waitlist_entries')
                     ->where('id', $row->id)

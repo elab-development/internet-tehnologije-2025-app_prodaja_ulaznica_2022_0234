@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import ButtonLink from '../button/ButtonLink';
+import ButtonLink from '../Button/ButtonLink';
 
 const Footer: React.FC = () => {
   const { isAuthenticated, isAdmin } = useAuth();

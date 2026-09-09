@@ -10,7 +10,7 @@ class AuthenticationTest extends TestCase
 {
     use RefreshDatabase;
 
-   
+
     public function test_user_can_register()
     {
         $response = $this->postJson('/api/register', [
@@ -29,7 +29,7 @@ class AuthenticationTest extends TestCase
         $this->assertDatabaseHas('users', ['email' => 'test@test.com']);
     }
 
-    
+
     public function test_user_can_login()
     {
         $user = User::factory()->create([
@@ -67,7 +67,7 @@ class AuthenticationTest extends TestCase
         $response->assertStatus(401);
     }
 
-   
+
     public function test_registration_requires_valid_data()
     {
         $response = $this->postJson('/api/register', [

@@ -1,0 +1,6 @@
+frontend/.env
+backup_users.sql
+frontend/node_modules/
+frontend/dist/
+tickets/vendor/
+tickets/storage/logs/*.log

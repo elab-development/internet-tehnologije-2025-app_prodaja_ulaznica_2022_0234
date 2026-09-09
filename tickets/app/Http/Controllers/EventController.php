@@ -2,118 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use OpenApi\Attributes as OA;
-
 use App\Http\Resources\EventResource;
 use App\Models\Event;
 use App\Models\Seat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
-
-
 
 class EventController extends Controller
 {
-        #[OA\Get(
-        path: "/api/events/{event}/weather",
-         tags: ["Events"],
-         summary: "Get weather forecast for event",
-         description: "Returns weather data for the event location",
-         parameters: [
-           new OA\Parameter(
-            name: "event",
-            in: "path",
-            required: true,
-            description: "Event ID",
-            schema: new OA\Schema(type: "integer")
-            )
-            ],
-         responses: [
-        new OA\Response(response: 200, description: "Weather data"),
-        new OA\Response(response: 404, description: "Weather data not available")
-         ]
-    )]
-
-    
-    public function weather(Event $event): JsonResponse
-{
-    Log::info("Weather method called for event: " . $event->id);
-    Log::info("Event city: " . $event->city);
-    
-    if (!$event->city) {
-        Log::info("No city specified");
-        return response()->json(['message' => 'City not specified for this event'], 400);
-    }
-
-    try {
-        Log::info("Calling Weather API for: " . $event->city);
-        
-        $response = Http::get('https://api.openweathermap.org/data/2.5/weather', [
-            'q' => $event->city . ',RS',
-            'appid' => env('WEATHER_API_KEY'),
-            'units' => 'metric',
-            'lang' => 'sr'
-        ]);
-
-        Log::info("Weather API response status: " . $response->status());
-        Log::info("Weather API response body: " . $response->body());
-
-        if ($response->successful()) {
-            $data = $response->json();
-
-            return response()->json([
-                'event' => [
-                    'title' => $event->title,
-                    'city' => $event->city,
-                    'date' => $event->start_at->format('d M Y, H:i'),
-                ],
-                'weather' => [
-                    'temperature' => $data['main']['temp'] ?? null,
-                    'feels_like' => $data['main']['feels_like'] ?? null,
-                    'description' => $data['weather'][0]['description'] ?? null,
-                    'humidity' => $data['main']['humidity'] ?? null,
-                    'wind_speed' => $data['wind']['speed'] ?? null,
-                    'icon' => $data['weather'][0]['icon'] ?? null,
-                ],
-                'source' => 'OpenWeatherMap API'
-            ]);
-        }
-
-        return response()->json(['message' => 'Weather data not available'], 404);
-
-    } catch (\Exception $e) {
-        Log::error('Weather API failed: ' . $e->getMessage());
-        return response()->json([
-            'message' => 'Failed to fetch weather data',
-            'error' => $e->getMessage()
-        ], 500);
-    }
-}
-
-       #[OA\Get(
-        path: "/api/events",
-        tags: ["Events"],
-        summary: "Get all events",
-        description: "Returns paginated list of events with optional filters",
-        parameters: [
-            new OA\Parameter(name: "q", in: "query", description: "Search query", schema: new OA\Schema(type: "string")),
-            new OA\Parameter(name: "city", in: "query", description: "Filter by city", schema: new OA\Schema(type: "string")),
-            new OA\Parameter(name: "date_from", in: "query", description: "Start date (Y-m-d)", schema: new OA\Schema(type: "string", format: "date")),
-            new OA\Parameter(name: "date_to", in: "query", description: "End date (Y-m-d)", schema: new OA\Schema(type: "string", format: "date")),
-            new OA\Parameter(name: "sort_by", in: "query", description: "Sort field", schema: new OA\Schema(type: "string", enum: ["title", "start_at", "created_at"])),
-            new OA\Parameter(name: "sort_dir", in: "query", description: "Sort direction", schema: new OA\Schema(type: "string", enum: ["asc", "desc"])),
-            new OA\Parameter(name: "page", in: "query", description: "Page number", schema: new OA\Schema(type: "integer")),
-            new OA\Parameter(name: "per_page", in: "query", description: "Items per page", schema: new OA\Schema(type: "integer")),
-        ],
-        responses: [
-            new OA\Response(response: 200, description: "List of events"),
-            new OA\Response(response: 404, description: "No events found")
-        ]
-    )]
 
     public function index(Request $request)
     {
@@ -136,12 +34,12 @@ class EventController extends Controller
 
         // search
         if (!empty($validated['q'])) {
-            $q = "%{$validated['q']}%";
+            $q = $validated['q'];
             $query->where(function ($w) use ($q) {
-                $w->whereRaw('title LIKE ?', [$q])
-                ->orWhereRaw('description LIKE ?', [$q])
-                ->orWhereRaw('venue LIKE ?', [$q])
-                ->orWhereRaw('city LIKE ?', [$q]);
+                $w->where('title', 'like', "%{$q}%")
+                    ->orWhere('description', 'like', "%{$q}%")
+                    ->orWhere('venue', 'like', "%{$q}%")
+                    ->orWhere('city', 'like', "%{$q}%");
             });
         }
 
@@ -170,159 +68,73 @@ class EventController extends Controller
         return EventResource::collection($events);
     }
 
-    #[OA\Post(
-        path: "/api/events",
-        tags: ["Events"],
-        summary: "Create new event",
-        description: "Admin only - Creates a new event with seats",
-        requestBody: new OA\RequestBody(
-            required: true,
-            content: new OA\JsonContent(
-                required: ["title", "slug", "venue", "start_at"],
-                properties: [
-                    new OA\Property(property: "title", type: "string", example: "Summer Concert"),
-                    new OA\Property(property: "slug", type: "string", example: "summer-concert-2026"),
-                    new OA\Property(property: "description", type: "string", example: "Amazing summer concert"),
-                    new OA\Property(property: "venue", type: "string", example: "Arena Belgrade"),
-                    new OA\Property(property: "city", type: "string", example: "Belgrade"),
-                    new OA\Property(property: "start_at", type: "string", format: "date-time", example: "2026-07-15 20:00:00"),
-                    new OA\Property(property: "end_at", type: "string", format: "date-time", example: "2026-07-15 23:00:00"),
-                    new OA\Property(property: "rows", type: "integer", example: 10),
-                    new OA\Property(property: "columns", type: "integer", example: 10),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 201, description: "Event created successfully"),
-            new OA\Response(response: 403, description: "Only admins can create events")
-        ]
-    )]
-
 
     public function store(Request $request)
     {
-    if (!Auth::check() || Auth::user()->role !== 'admin') {
-        return response()->json(['error' => 'Only admins can create events'], 403);
-    }
-
-    $validated = $request->validate([
-        'title'       => ['required', 'string', 'max:255'],
-        'slug'        => ['required', 'string', 'max:255', 'unique:events,slug'],
-        'description' => ['nullable', 'string'],
-        'venue'       => ['required', 'string', 'max:255'],
-        'city'        => ['nullable', 'string', 'max:255'],
-        'start_at'    => ['required', 'date'],
-        'end_at'      => ['nullable', 'date', 'after_or_equal:start_at'],
-        'rows'        => ['sometimes', 'integer', 'min:1', 'max:26'],
-        'columns'     => ['sometimes', 'integer', 'min:1', 'max:50'],
-    ]);
-
-    $rows = min($validated['rows'] ?? 10, 26);
-    $columns = min($validated['columns'] ?? 10, 50);
-
-    // 1. Create Event
-    $event = Event::create([
-        'title'       => $validated['title'],
-        'slug'        => $validated['slug'],
-        'description' => $validated['description'] ?? null,
-        'venue'       => $validated['venue'],
-        'city'        => $validated['city'] ?? null,
-        'start_at'    => $validated['start_at'],
-        'end_at'      => $validated['end_at'] ?? null,
-    ]);
-
-    // 2. Create Seats for the event
-    try {
-    $rowLetters = range('A', 'Z');
-    for ($r = 0; $r < $rows; $r++) {
-        $rowLetter = $rowLetters[$r];
-        for ($c = 1; $c <= $columns; $c++) {
-            Seat::create([
-                'event_id'    => $event->id,
-                'venue_id'    => null,
-                'seat_number' => $rowLetter . $c,
-                'row'         => $rowLetter,
-                'column'      => $c,
-                'status'      => 'available',
-                'price'       => null,
-            ]);
+        if (!Auth::check() || Auth::user()->role !== 'admin') {
+            return response()->json(['error' => 'Only admins can create events'], 403);
         }
-     }
-        } catch (\Exception $e) {
-         return response()->json([
-           'message' => 'Event created but seats failed',
-          'error' => $e->getMessage(),
-          'event' => new EventResource($event),
-         ], 201);
-     }
 
-     return response()->json([
-        'message' => 'Event created successfully',
-        'event'   => new EventResource($event),
-     ], 201);
+        $validated = $request->validate([
+            'title'       => ['required', 'string', 'max:255'],
+            'slug'        => ['required', 'string', 'max:255', 'unique:events,slug'],
+            'description' => ['nullable', 'string'],
+            'venue'       => ['required', 'string', 'max:255'],
+            'city'        => ['nullable', 'string', 'max:255'],
+            'start_at'    => ['required', 'date'],
+            'end_at'      => ['nullable', 'date', 'after_or_equal:start_at'],
+            'rows'        => ['sometimes', 'integer', 'min:1', 'max:26'],
+            'columns'     => ['sometimes', 'integer', 'min:1', 'max:50'],
+        ]);
+
+        $rows = $validated['rows'] ?? 10;
+        $columns = $validated['columns'] ?? 10;
+
+        $event = DB::transaction(function () use ($validated, $rows, $columns) {
+            $event = Event::create([
+                'title'       => $validated['title'],
+                'slug'        => $validated['slug'],
+                'description' => $validated['description'] ?? null,
+                'venue'       => $validated['venue'],
+                'city'        => $validated['city'] ?? null,
+                'start_at'    => $validated['start_at'],
+                'end_at'      => $validated['end_at'] ?? null,
+            ]);
+
+            $rowLetters = range('A', 'Z');
+            for ($r = 0; $r < $rows; $r++) {
+                $rowLetter = $rowLetters[$r];
+                for ($c = 1; $c <= $columns; $c++) {
+                    Seat::create([
+                        'event_id'    => $event->id,
+                        'venue_id'    => null,
+                        'seat_number' => $rowLetter . $c,
+                        'row'         => $rowLetter,
+                        'column'      => $c,
+                        'status'      => 'available',
+                        'price'       => null,
+                    ]);
+                }
+            }
+
+            return $event;
+        });
+
+        return response()->json([
+            'message' => 'Event created successfully',
+            'event'   => new EventResource($event),
+        ], 201);
     }
 
-    #[OA\Get(
-        path: "/api/events/{event}",
-        tags: ["Events"],
-        summary: "Get single event",
-        description: "Returns event details with ticket types",
-        parameters: [
-            new OA\Parameter(
-                name: "event",
-                in: "path",
-                required: true,
-                description: "Event ID",
-                schema: new OA\Schema(type: "integer")
-            )
-        ],
-        responses: [
-            new OA\Response(response: 200, description: "Event details"),
-            new OA\Response(response: 404, description: "Event not found")
-        ]
-    )]
+
 
     public function show(Event $event)
     {
         $event->load('ticketTypes');
 
-        
+
         return new EventResource($event);
     }
-
-    #[OA\Put(
-        path: "/api/events/{event}",
-        tags: ["Events"],
-        summary: "Update event",
-        description: "Admin only - Updates event details",
-        parameters: [
-            new OA\Parameter(
-                name: "event",
-                in: "path",
-                required: true,
-                description: "Event ID",
-                schema: new OA\Schema(type: "integer")
-            )
-        ],
-        requestBody: new OA\RequestBody(
-            content: new OA\JsonContent(
-                properties: [
-                    new OA\Property(property: "title", type: "string"),
-                    new OA\Property(property: "slug", type: "string"),
-                    new OA\Property(property: "description", type: "string"),
-                    new OA\Property(property: "venue", type: "string"),
-                    new OA\Property(property: "city", type: "string"),
-                    new OA\Property(property: "start_at", type: "string", format: "date-time"),
-                    new OA\Property(property: "end_at", type: "string", format: "date-time"),
-                ]
-            )
-        ),
-        responses: [
-            new OA\Response(response: 200, description: "Event updated successfully"),
-            new OA\Response(response: 403, description: "Only admins can update events"),
-            new OA\Response(response: 404, description: "Event not found")
-        ]
-    )]
 
     public function update(Request $request, Event $event)
     {
@@ -347,27 +159,7 @@ class EventController extends Controller
             'event'   => new EventResource($event),
         ]);
     }
-    
-    #[OA\Delete(
-        path: "/api/events/{event}",
-        tags: ["Events"],
-        summary: "Delete event",
-        description: "Admin only - Deletes an event",
-        parameters: [
-            new OA\Parameter(
-                name: "event",
-                in: "path",
-                required: true,
-                description: "Event ID",
-                schema: new OA\Schema(type: "integer")
-            )
-        ],
-        responses: [
-            new OA\Response(response: 200, description: "Event deleted successfully"),
-            new OA\Response(response: 403, description: "Only admins can delete events"),
-            new OA\Response(response: 404, description: "Event not found")
-        ]
-    )]
+
 
     public function destroy(Event $event)
     {
@@ -379,7 +171,4 @@ class EventController extends Controller
 
         return response()->json(['message' => 'Event deleted successfully']);
     }
-
-    
-
 }

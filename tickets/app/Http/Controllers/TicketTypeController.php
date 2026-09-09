@@ -219,7 +219,7 @@ class TicketTypeController extends Controller
             new OA\Response(response: 404, description: "Ticket type not found")
         ]
     )]
-    
+
     public function destroy(TicketType $ticketType)
     {
         if (!Auth::check() || Auth::user()->role !== 'admin') {

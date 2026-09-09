@@ -1,10 +1,4 @@
 node_modules
 dist
 .git
-.env
 *.log
-.DS_Store
-coverage
-.vscode
-.idea
-README.md

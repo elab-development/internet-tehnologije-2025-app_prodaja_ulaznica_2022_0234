@@ -22,3 +22,59 @@ Ova aplikacija omogućava kreiranje, uređivanje i brisanje događaja, kao i upr
 
 ```bash
 https://github.com/elab-development/serverske-veb-tehnologije-2024-25-veb_app_prodaja_ulaznica_2022_0501
+
+```
+
+## Pokretanje bez Dockera (XAMPP)
+
+Pokreni MySQL u XAMPP-u, kreiraj bazu `prodaja_ulaznica`, a zatim iz direktorijuma `tickets` pokreni:
+
+```bash
+php artisan migrate
+php artisan serve
+```
+
+U drugom terminalu iz direktorijuma `frontend` pokreni:
+
+```bash
+npm install
+npm run dev
+```
+
+Frontend je na `http://localhost:5173`, a lokalni backend koristi XAMPP MySQL na `127.0.0.1:3306`.
+
+## Pokretanje sa Dockerom
+
+Iz glavnog direktorijuma projekta pokreni sve servise jednom komandom:
+
+```bash
+docker compose up -d --build
+```
+
+Frontend je na `http://localhost:3000`, backend na `http://localhost:8000`, a phpMyAdmin na `http://localhost:8080`. Docker MySQL je spolja dostupan na portu `3307`.
+
+Lokalni i Docker režim koriste odvojene baze. Docker konfiguracija ne koristi XAMPP MySQL.
+
+## API dokumentacija i testovi
+
+OpenAPI specifikacija se nalazi u `docs/openapi.yaml`, a Swagger UI u `docs/swagger.html`. Swagger UI može da se otvori preko lokalnog statičkog servera iz direktorijuma `docs`, na primer:
+
+```bash
+cd docs
+python -m http.server 9000
+```
+
+Zatim otvori `http://localhost:9000/swagger.html`.
+
+Backend testovi se pokreću ovako:
+
+```bash
+cd tickets
+php artisan test
+```
+
+CI workflow automatski pokreće backend testove, frontend build i Docker build na push i pull request.
+
+CD workflow se nalazi u `.github/workflows/cd.yml`. Na svaki push na `main` automatski gradi i objavljuje backend i frontend image-e u GitHub Container Registry. Može se pokrenuti i ručno iz taba **Actions** izborom workflow-a `CD` i opcije **Run workflow**.
+
+Aplikacija koristi spoljne API-je za Art Institute of Chicago događaje, Open-Meteo vreme i Frankfurter kursnu listu. Endpoint-i su `/api/public/events`, `/api/external/weather` i `/api/external/exchange-rate`.

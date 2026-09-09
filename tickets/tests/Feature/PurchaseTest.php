@@ -73,7 +73,7 @@ class PurchaseTest extends TestCase
         $user = User::factory()->create(['role' => 'user']);
         $event = Event::factory()->create();
         $ticketType = TicketType::factory()->create(['event_id' => $event->id]);
-        
+
         $purchase = Purchase::factory()->create([
             'user_id' => $user->id,
             'event_id' => $event->id,
@@ -95,7 +95,7 @@ class PurchaseTest extends TestCase
         $user = User::factory()->create(['role' => 'user']);
         $event = Event::factory()->create();
         $ticketType = TicketType::factory()->create(['event_id' => $event->id]);
-        
+
         $purchase = Purchase::factory()->create([
             'user_id' => $user->id,
             'event_id' => $event->id,
@@ -117,7 +117,7 @@ class PurchaseTest extends TestCase
         $user = User::factory()->create(['role' => 'user']);
         $event = Event::factory()->create();
         $ticketType = TicketType::factory()->create(['event_id' => $event->id]);
-        
+
         $purchase = Purchase::factory()->create([
             'user_id' => $user->id,
             'event_id' => $event->id,

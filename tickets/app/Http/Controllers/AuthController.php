@@ -72,7 +72,7 @@ class AuthController extends Controller
             'data' => $user,
             'access_token' => $token,
             'token_type' => 'Bearer',
-        ], 201); 
+        ], 201);
     }
 
     #[OA\Post(
@@ -143,7 +143,7 @@ class AuthController extends Controller
             )
         ]
     )]
-    
+
     public function logout(Request $request)
     {
         $request->user()->tokens()->delete();

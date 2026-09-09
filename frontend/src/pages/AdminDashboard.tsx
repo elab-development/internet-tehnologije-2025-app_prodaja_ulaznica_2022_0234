@@ -3,10 +3,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import { api } from '../services/api';
-import Master from '../Components/layout/Master';
-import Section from '../Components/section/Section';
-import SalesChart from '../Components/charts/SalesChart';
-import EventsChart from '@/Components/charts/EventsChart';
+import Master from '../components/layout/Master';
+import Section from '../components/section/Section';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 interface Stats {
   total_events: number;
@@ -75,16 +74,6 @@ const AdminDashboard: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
-  const [salesData, setSalesData] = useState<{ labels: string[], values: number[] }>({
-    labels: [],
-    values: []
-  });
-
-  const [eventsData, setEventsData] = useState<{ labels: string[], values: number[] }>({
-    labels: [],
-    values: []
-  });
-
   
   // Queue state
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
@@ -105,7 +94,6 @@ const AdminDashboard: React.FC = () => {
       return;
     }
     fetchData();
-    fetchChartData();
   }, [isAuthenticated, isAdmin]);
 
   // Fetch waitlist when event is selected
@@ -151,20 +139,6 @@ const AdminDashboard: React.FC = () => {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchChartData = async () => {
-    try {
-      // Sales data po mesecima
-      const salesRes = await api.get('/stats/sales-by-month');
-      setSalesData(salesRes.data);
-
-      // Events data - top 5 događaja
-      const eventsRes = await api.get('/stats/sales-by-event');
-      setEventsData(eventsRes.data);
-    } catch (error) {
-      console.error('Error fetching chart data:', error);
     }
   };
 
@@ -440,25 +414,25 @@ const AdminDashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Chart */}
             <div className="bg-white rounded-xl shadow-md p-6 mb-8">
-              <SalesChart
-                data={salesData.labels.length > 0 ? salesData :{
-                  labels: ['Januar', 'Februar', 'Mart', 'April', 'Maj', 'Jun', 'Jul', 'Avgust', 'Septembar', 'Oktobar', 'Novembar', 'Decembar'],
-                  values: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-               }}
-              />
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Statistika sistema</h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={[
+                    { label: 'Dogadjaji', value: stats.total_events },
+                    { label: 'Korisnici', value: stats.total_users },
+                    { label: 'Kupovine', value: stats.total_purchases },
+                    { label: 'Karte', value: stats.tickets_sold },
+                  ]}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="label" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#2563eb" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
-
-            {/* Events Chart */}
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <EventsChart
-                data={eventsData.labels.length > 0 ? eventsData : {
-                  labels: ['Nema podataka'],
-                  values: [1],
-              }}
-            />
-          </div>
 
             {/* Recent Activity */}
             <div className="grid lg:grid-cols-2 gap-6">
