@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useAlert } from '../hooks/useAlert';
 import { api } from '../services/api';
-import Master from '../components/layout/Master';
-import Section from '../components/section/Section';
-import Heading from '../components/heading/Heading';
-import Input from '../components/form/Input';
+import Master from '../Components/layout/Master';
+import Section from '../Components/section/Section';
+import Heading from '../Components/heading/Heading';
+import Input from '../Components/form/Input';
 
 const ContactUs: React.FC = () => {
   const { showAlert } = useAlert();

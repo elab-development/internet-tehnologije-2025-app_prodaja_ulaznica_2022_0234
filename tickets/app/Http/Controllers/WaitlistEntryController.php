@@ -12,18 +12,19 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class WaitlistEntryController extends Controller
 {
-    /**
-     * Join the waitlist for an event
-     */
     public function join(Request $request, Event $event)
     {
         $user = $request->user();
-        // Check if already in waitlist
-        $existing = WaitlistEntry::where('event_id', $event->id)
-            ->where('user_id', $user->id)
+        $userId = $user->id;
+        $eventId = $event->id;
+
+        // SQL Injection safe: koristi parametre preko Eloquent
+        $existing = WaitlistEntry::where('event_id', $eventId)
+            ->where('user_id', $userId)
             ->first();
 
         if ($existing) {
@@ -34,15 +35,15 @@ class WaitlistEntryController extends Controller
         }
 
         $entry = WaitlistEntry::create([
-            'event_id'  => $event->id,
-            'user_id'   => $user->id,
+            'event_id'  => $eventId,
+            'user_id'   => $userId,
             'status'    => 'queued',
             'token'     => null,
             'ttl_until' => null,
         ]);
 
-        // compute position
-        $position = WaitlistEntry::where('event_id', $event->id)
+        // position calculation
+        $position = WaitlistEntry::where('event_id', $eventId)
             ->where('status', 'queued')
             ->where('id', '<=', $entry->id)
             ->count();
@@ -51,34 +52,30 @@ class WaitlistEntryController extends Controller
             'message' => 'Joined waitlist',
             'waitlist_entry' => new WaitlistEntryResource($entry),
             'position' => $position,
-            'queue_size' => WaitlistEntry::where('event_id', $event->id)->where('status', 'queued')->count(),
+            'queue_size' => WaitlistEntry::where('event_id', $eventId)->where('status', 'queued')->count(),
         ], 201);
     }
 
-    /**
-     * Get waitlist status for a user on an event
-     */
     public function status(Request $request, Event $event)
     {
-        $user = $request->user();
+        $userId = $request->user()->id;
+        $eventId = $event->id;
 
-        $entry = WaitlistEntry::where('event_id', $event->id)
-            ->where('user_id', $user->id)
+        $entry = WaitlistEntry::where('event_id', $eventId)
+            ->where('user_id', $userId)
             ->first();
 
         if (!$entry) {
             return response()->json(['message' => 'Not in waitlist'], 404);
         }
 
-        // Calculate position in queue (for context)
-        $position = WaitlistEntry::where('event_id', $event->id)
+        $position = WaitlistEntry::where('event_id', $eventId)
             ->where('status', 'queued')
             ->where('id', '<=', $entry->id)
             ->count();
 
-        // If admitted, check for a reserved purchase
-        $reservation = Purchase::where('user_id', $user->id)
-            ->where('event_id', $event->id)
+        $reservation = Purchase::where('user_id', $userId)
+            ->where('event_id', $eventId)
             ->where('status', 'reserved')
             ->where('reserved_until', '>', Carbon::now())
             ->first();
@@ -86,20 +83,21 @@ class WaitlistEntryController extends Controller
         return response()->json([
             'waitlist_entry' => new WaitlistEntryResource($entry),
             'position' => $position,
-            'queue_size'     => WaitlistEntry::where('event_id', $event->id)->where('status', 'queued')->count(),
-            'reservation' => $reservation ? ['purchase_id' => $reservation->id, 'expires_at' => optional($reservation->reserved_until)?->toISOString()] : null,
+            'queue_size' => WaitlistEntry::where('event_id', $eventId)->where('status', 'queued')->count(),
+            'reservation' => $reservation ? [
+                'purchase_id' => $reservation->id,
+                'expires_at' => optional($reservation->reserved_until)?->toISOString()
+            ] : null,
         ]);
     }
 
-    /**
-     * Leave the waitlist
-     */
     public function leave(Request $request, Event $event)
     {
-        $user = $request->user();
+        $userId = $request->user()->id;
+        $eventId = $event->id;
 
-        $entry = WaitlistEntry::where('event_id', $event->id)
-            ->where('user_id', $user->id)
+        $entry = WaitlistEntry::where('event_id', $eventId)
+            ->where('user_id', $userId)
             ->firstOrFail();
 
         $entry->delete();
@@ -109,16 +107,15 @@ class WaitlistEntryController extends Controller
         ], 200);
     }
 
-    /**
-     * Admit next user from queue (Admin only)
-     */
     public function admitNext(Request $request, Event $event)
     {
-        $this->authorize('admin'); // ensure admin
+        $this->authorize('admin');
 
         $service = new WaitlistService();
+
         try {
             $result = $service->admitNextForEvent($event);
+
             if (!$result) {
                 return response()->json(['message' => 'No queued users or no tickets available'], 404);
             }
@@ -126,22 +123,24 @@ class WaitlistEntryController extends Controller
             return response()->json([
                 'message' => 'User admitted and reserved a ticket',
                 'waitlist_entry' => new WaitlistEntryResource($result['entry']),
-                'reservation' => ['purchase_id' => $result['purchase']->id, 'expires_at' => $result['purchase']->reserved_until->toISOString()],
+                'reservation' => [
+                    'purchase_id' => $result['purchase']->id,
+                    'expires_at' => $result['purchase']->reserved_until->toISOString()
+                ],
                 'gate_token' => $result['token'],
             ], 200);
         } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 400);
+            // logovanje za debugging, ne izlagati korisniku raw error
+            Log::error($e->getMessage());
+            return response()->json(['message' => 'Could not admit user'], 400);
         }
     }
 
-    /**
-     * List all waitlist entries for an event (Admin only)
-     */
     public function listByEvent(Request $request, Event $event)
     {
-       
+        $eventId = $event->id;
 
-        $entries = WaitlistEntry::where('event_id', $event->id)
+        $entries = WaitlistEntry::where('event_id', $eventId)
             ->with(['user'])
             ->orderBy('status')
             ->orderBy('id')

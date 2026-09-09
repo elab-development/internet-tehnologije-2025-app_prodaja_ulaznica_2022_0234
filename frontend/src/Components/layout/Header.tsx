@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import useClickOutside from '../../hooks/useClickOutside';
 import { useAuth } from '../../hooks/useAuth';
 
-// components
+// Components
 import Dropdown from '../common/Dropdown';
 import DropdownItem from '../common/DropdownItem';
 import ProfilePhoto from '../common/ProfilePhoto';

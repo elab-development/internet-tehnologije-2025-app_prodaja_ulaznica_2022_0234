@@ -158,7 +158,7 @@ class PurchaseController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        if ($purchase->status === 'paid') {
+        if (in_array($purchase->status, ['paid', 'completed'], true)) {
             return response()->json(['message' => 'Cannot cancel a paid purchase'], 400);
         }
 

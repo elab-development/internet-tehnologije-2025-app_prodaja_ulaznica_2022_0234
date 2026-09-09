@@ -3,8 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import { api } from '../services/api';
-import Master from '../components/layout/Master';
-import Section from '../components/section/Section';
+import Master from '../Components/layout/Master';
+import Section from '../Components/section/Section';
 
 interface TicketTypeForm {
   id?: number;
