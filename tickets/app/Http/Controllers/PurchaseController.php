@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use App\Models\TicketType;
 
 class PurchaseController extends Controller
@@ -30,10 +31,10 @@ class PurchaseController extends Controller
     public function show(Purchase $purchase): JsonResponse
     {
         if ($purchase->user_id !== Auth::id()) {
-        return response()->json(['message' => 'Unauthorized'], 403);
-    }
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
 
-         return response()->json($purchase->load(['event', 'ticketType']));
+        return response()->json($purchase->load(['event', 'ticketType']));
     }
 
     /**
@@ -122,12 +123,28 @@ class PurchaseController extends Controller
      */
     public function pay(Purchase $purchase): JsonResponse
     {
-        
+        if ($purchase->user_id !== Auth::id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
         if ($purchase->status !== 'pending') {
             return response()->json(['message' => 'Cannot pay for this purchase'], 400);
         }
 
-        $purchase->update(['status' => 'completed']);
+        DB::transaction(function () use ($purchase) {
+            $purchase->update(['status' => 'paid']);
+            $purchase->tickets()->update(['status' => 'sold']);
+            $purchase->tickets()->with('seat')->get()->each(function ($ticket) {
+                $ticket->seat?->update(['status' => 'sold']);
+            });
+            $purchase->payment()->create([
+                'amount' => $purchase->total_amount,
+                'status' => 'completed',
+                'payment_method' => 'demo',
+                'transaction_id' => (string) Str::uuid(),
+                'response_data' => ['provider' => 'demo'],
+            ]);
+        });
 
         return response()->json($purchase);
     }
@@ -137,13 +154,22 @@ class PurchaseController extends Controller
      */
     public function cancel(Purchase $purchase): JsonResponse
     {
-        
-
-        if ($purchase->status === 'completed') {
-            return response()->json(['message' => 'Cannot cancel a completed purchase'], 400);
+        if ($purchase->user_id !== Auth::id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $purchase->update(['status' => 'cancelled']);
+        if ($purchase->status === 'paid') {
+            return response()->json(['message' => 'Cannot cancel a paid purchase'], 400);
+        }
+
+        DB::transaction(function () use ($purchase) {
+            $purchase->update(['status' => 'cancelled']);
+            $purchase->ticketType()->decrement('quantity_sold', $purchase->quantity);
+            $purchase->tickets()->whereIn('status', ['reserved', 'sold'])->update(['status' => 'available']);
+            $purchase->tickets()->with('seat')->get()->each(function ($ticket) {
+                $ticket->seat?->update(['status' => 'available']);
+            });
+        });
 
         return response()->json($purchase);
     }
@@ -174,49 +200,48 @@ class PurchaseController extends Controller
      * Admit next person from queue (admin)
      */
     public function admitNext(Request $request, Event $event): JsonResponse
-{
-    $data = $request->validate([
-        'count'       => ['sometimes', 'integer', 'min:1', 'max:2000'],
-        
-    ]);
+    {
+        $data = $request->validate([
+            'count'       => ['sometimes', 'integer', 'min:1', 'max:2000'],
 
-    $count = $data['count'] ?? 50;
-    
+        ]);
 
-    $admitted = [];
+        $count = $data['count'] ?? 50;
 
-    DB::transaction(function () use ($event, $count, &$admitted) {
-        $rows = DB::table('waitlist_entries')
-            ->where('event_id', $event->id)
-            ->where('status', 'queued')
-            ->orderBy('id', 'asc')
-            ->limit($count)
-            ->lockForUpdate()
-            ->get();
 
-        foreach ($rows as $row) {
-            $token    = \Illuminate\Support\Str::random(32);
-            
+        $admitted = [];
 
-            DB::table('waitlist_entries')
-                ->where('id', $row->id)
-                ->update([
-                    'status'     => 'admitted',
-                    'token'      => $token,
-                    'ttl_until'  => null,
-                    'updated_at' => now(),
-                ]);
+        DB::transaction(function () use ($event, $count, &$admitted) {
+            $rows = DB::table('waitlist_entries')
+                ->where('event_id', $event->id)
+                ->where('status', 'queued')
+                ->orderBy('id', 'asc')
+                ->limit($count)
+                ->lockForUpdate()
+                ->get();
 
-            $admitted[] = ['user_id' => $row->user_id, 'token' => $token];
-        }
-    });
+            foreach ($rows as $row) {
+                $token    = \Illuminate\Support\Str::random(32);
 
-    return response()->json([
-        'message'  => 'Admitted users',
-        'event_id' => $event->id,
-        'count'    => count($admitted),
-        'admitted' => $admitted,
-    ]);
-}
 
+                DB::table('waitlist_entries')
+                    ->where('id', $row->id)
+                    ->update([
+                        'status'     => 'admitted',
+                        'token'      => $token,
+                        'ttl_until'  => null,
+                        'updated_at' => now(),
+                    ]);
+
+                $admitted[] = ['user_id' => $row->user_id, 'token' => $token];
+            }
+        });
+
+        return response()->json([
+            'message'  => 'Admitted users',
+            'event_id' => $event->id,
+            'count'    => count($admitted),
+            'admitted' => $admitted,
+        ]);
+    }
 }

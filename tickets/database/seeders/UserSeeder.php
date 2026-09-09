@@ -42,5 +42,15 @@ class UserSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
+
+        User::updateOrCreate(
+            ['email' => 'organizer@tickets.rs'],
+            [
+                'name' => 'Event Organizer',
+                'password' => Hash::make('password'),
+                'role' => 'organizer',
+                'email_verified_at' => now(),
+            ]
+        );
     }
 }
