@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAlert } from '../hooks/useAlert';
-import Input from '../Components/form/Input';
+import Input from '../Components/Form/Input';
 
 const Register: React.FC = () => {
   const navigate = useNavigate();

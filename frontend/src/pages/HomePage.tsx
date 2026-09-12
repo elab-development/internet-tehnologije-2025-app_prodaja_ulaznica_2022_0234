@@ -9,8 +9,8 @@ import { Event } from '../types';
 
 // Components
 import Master from '../Components/layout/Master';
-import Section from '../Components/section/Section';
-import Heading from '../Components/heading/Heading';
+import Section from '../Components/Section/Section';
+import Heading from '../Components/Heading/Heading';
 import FormSearch from '../Components/home/FormSearch';
 import CardGroup from '../Components/card/CardGroup';
 

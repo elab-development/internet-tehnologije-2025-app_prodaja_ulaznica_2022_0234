@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import Master from '../Components/layout/Master';
-import Section from '../Components/section/Section';
-import Heading from '../Components/heading/Heading';
+import Section from '../Components/Section/Section';
+import Heading from '../Components/Heading/Heading';
 import CardGroup from '../Components/card/CardGroup';
 import { useAlert } from '../hooks/useAlert';
 

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
-import Input from '../Components/form/Input';
+import Input from '../Components/Form/Input';
 import { handleApiError } from '../utils/ErrorHandler';
 
 const Login: React.FC = () => {

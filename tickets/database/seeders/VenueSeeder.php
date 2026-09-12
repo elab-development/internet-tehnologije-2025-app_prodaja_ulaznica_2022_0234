@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use App\Models\Venue;
-use App\Models\Seat;
 
 class VenueSeeder extends Seeder
 {
@@ -45,26 +45,32 @@ class VenueSeeder extends Seeder
             );
 
             // create seats if not present (use updateOrCreate to avoid duplicates)
+            $timestamp = now();
+            $seats = [];
             $rows = $venue->rows;
             $cols = $venue->columns;
             for ($r = 0; $r < $rows; $r++) {
                 $rowLetter = chr(65 + ($r % 26)); // A..Z repeating if >26
                 for ($c = 1; $c <= $cols; $c++) {
                     $seatNumber = $rowLetter . $c;
-                    Seat::updateOrCreate(
-                        [
-                            'venue_id' => $venue->id,
-                            'seat_number' => $seatNumber,
-                        ],
-                        [
-                            'row' => $rowLetter,
-                            'column' => $c,
-                            'status' => 'available',
-                            'price' => null,
-                        ]
-                    );
+                    $seats[] = [
+                        'venue_id' => $venue->id,
+                        'seat_number' => $seatNumber,
+                        'row' => $rowLetter,
+                        'column' => $c,
+                        'status' => 'available',
+                        'price' => null,
+                        'created_at' => $timestamp,
+                        'updated_at' => $timestamp,
+                    ];
                 }
             }
+
+            DB::table('seats')->upsert(
+                $seats,
+                ['venue_id', 'seat_number'],
+                ['row', 'column', 'status', 'price', 'updated_at']
+            );
         }
     }
 }

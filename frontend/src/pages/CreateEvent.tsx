@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import { api } from '../services/api';
 import Master from '../Components/layout/Master';
-import Section from '../Components/section/Section';
+import Section from '../Components/Section/Section';
 
 interface TicketTypeForm {
   name: string;

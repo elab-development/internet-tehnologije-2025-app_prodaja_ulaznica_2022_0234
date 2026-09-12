@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Master from '../Components/layout/Master';
-import Section from '../Components/section/Section';
-import Heading from '../Components/heading/Heading';
+import Section from '../Components/Section/Section';
+import Heading from '../Components/Heading/Heading';
 
 interface FAQItem {
   question: string;

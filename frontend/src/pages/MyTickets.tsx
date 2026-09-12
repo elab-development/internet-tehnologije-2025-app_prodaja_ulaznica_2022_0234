@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import Master from '../Components/layout/Master';
-import Section from '../Components/section/Section';
-import Heading from '../Components/heading/Heading';
+import Section from '../Components/Section/Section';
+import Heading from '../Components/Heading/Heading';
 
 const MyAccount: React.FC = () => {
   const navigate = useNavigate();
