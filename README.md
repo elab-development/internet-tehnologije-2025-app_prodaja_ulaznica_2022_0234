@@ -1,28 +1,27 @@
-# 🎫 Aplikacija za prodaju ulaznica
+# Aplikacija za prodaju ulaznica
 
 Ova aplikacija omogućava kreiranje, uređivanje i brisanje događaja, kao i upravljanje više različitih tipova karata po događaju. Korisnicima je omogućena kupovina karata, a u slučaju povećanog broja korisnika aktivira se red čekanja koji sprečava preopterećenje sistema. Korisnici se iz reda čekanja postepeno puštaju u aplikaciju kako bi izvršili kupovinu.
 
 ---
 
-## 📌 Opis funkcionalnosti
+## Opis funkcionalnosti
 
-- ✅ **Kreiranje, izmena i brisanje događaja** (CRUD)
-- ✅ **Više tipova karata** za svaki događaj (npr. standardna, VIP, studentska)
-- ✅ **Kupovina karata** sa proverom dostupnosti
-- ✅ **Red čekanja** za korisnike kada je aplikacija preopterećena
-- ✅ **Postepeno puštanje korisnika** iz reda u aplikaciju
-- ✅ **Upravljanje zalihama karata** po tipu i događaju
-- ✅ **Jednostavan korisnički interfejs**
+- **Kreiranje, izmena i brisanje događaja** (CRUD)
+- **Više tipova karata** za svaki događaj (npr. standardna, VIP, studentska)
+- **Kupovina karata** sa proverom dostupnosti
+- **Red čekanja** za korisnike kada je aplikacija preopterećena
+- **Postepeno puštanje korisnika** iz reda u aplikaciju
+- **Upravljanje zalihama karata** po tipu i događaju
+- **Jednostavan korisnički interfejs**
 
 ---
 
-## 🚀 Pokretanje projekta na lokalnoj mašini
+## Pokretanje projekta na lokalnoj mašini
 
 ### 1. Kloniraj repozitorijum
 
 ```bash
-https://github.com/elab-development/serverske-veb-tehnologije-2024-25-veb_app_prodaja_ulaznica_2022_0501
-
+git clone https://github.com/elab-development/internet-tehnologije-2025-app_prodaja_ulaznica_2022_0234
 ```
 
 ## Pokretanje bez Dockera (XAMPP)
@@ -51,20 +50,18 @@ Iz glavnog direktorijuma projekta pokreni sve servise jednom komandom:
 docker compose up -d --build
 ```
 
-Frontend je na `http://localhost:3000`, backend na `http://localhost:8000`, a phpMyAdmin na `http://localhost:8080`. Docker MySQL je spolja dostupan na portu `3307`.
+Frontend je na `http://localhost:5173`, backend na `http://localhost:8000`, a phpMyAdmin na `http://localhost:8080`. Docker MySQL je spolja dostupan na portu `3307`.
 
 Lokalni i Docker režim koriste odvojene baze. Docker konfiguracija ne koristi XAMPP MySQL.
 
 ## API dokumentacija i testovi
 
-OpenAPI specifikacija se nalazi u `docs/openapi.yaml`, a Swagger UI u `docs/swagger.html`. Swagger UI može da se otvori preko lokalnog statičkog servera iz direktorijuma `docs`, na primer:
+Swagger UI je dostupan na `http://localhost:8000/api/documentation` kada je backend pokrenut (lokalno ili kroz Docker). Generiše se automatski iz `@OA` anotacija u kontrolerima komandom:
 
 ```bash
-cd docs
-python -m http.server 9000
+cd tickets
+php artisan l5-swagger:generate
 ```
-
-Zatim otvori `http://localhost:9000/swagger.html`.
 
 Backend testovi se pokreću ovako:
 
