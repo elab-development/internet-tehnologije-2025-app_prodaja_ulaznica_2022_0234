@@ -3,8 +3,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import { api } from '../services/api';
-import Master from '../components/layout/Master';
-import Section from '../components/section/Section';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import Master from '../Components/layout/Master';
+import Section from '../Components/Section/Section';
 
 interface Stats {
   total_events: number;
@@ -410,6 +411,26 @@ const AdminDashboard: React.FC = () => {
                     <p className="text-2xl font-bold text-gray-800">{stats.pending_purchases}</p>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-md p-6 mb-8">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Statistika sistema</h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={[
+                    { label: 'Dogadjaji', value: stats.total_events },
+                    { label: 'Korisnici', value: stats.total_users },
+                    { label: 'Kupovine', value: stats.total_purchases },
+                    { label: 'Karte', value: stats.tickets_sold },
+                  ]}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="label" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#2563eb" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
 

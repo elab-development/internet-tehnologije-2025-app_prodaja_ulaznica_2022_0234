@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\Seat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class EventController extends Controller
@@ -69,67 +70,61 @@ class EventController extends Controller
 
 
     public function store(Request $request)
-{
-    if (!Auth::check() || Auth::user()->role !== 'admin') {
-        return response()->json(['error' => 'Only admins can create events'], 403);
-    }
-
-    $validated = $request->validate([
-        'title'       => ['required', 'string', 'max:255'],
-        'slug'        => ['required', 'string', 'max:255', 'unique:events,slug'],
-        'description' => ['nullable', 'string'],
-        'venue'       => ['required', 'string', 'max:255'],
-        'city'        => ['nullable', 'string', 'max:255'],
-        'start_at'    => ['required', 'date'],
-        'end_at'      => ['nullable', 'date', 'after_or_equal:start_at'],
-        'rows'        => ['sometimes', 'integer', 'min:1', 'max:26'],
-        'columns'     => ['sometimes', 'integer', 'min:1', 'max:50'],
-    ]);
-
-    $rows = $validated['rows'] ?? 10;
-    $columns = $validated['columns'] ?? 10;
-
-    // 1. Create Event
-    $event = Event::create([
-        'title'       => $validated['title'],
-        'slug'        => $validated['slug'],
-        'description' => $validated['description'] ?? null,
-        'venue'       => $validated['venue'],
-        'city'        => $validated['city'] ?? null,
-        'start_at'    => $validated['start_at'],
-        'end_at'      => $validated['end_at'] ?? null,
-    ]);
-
-    // 2. Create Seats for the event
-    try {
-    $rowLetters = range('A', 'Z');
-    for ($r = 0; $r < $rows; $r++) {
-        $rowLetter = $rowLetters[$r];
-        for ($c = 1; $c <= $columns; $c++) {
-            Seat::create([
-                'event_id'    => $event->id,
-                'venue_id'    => null,
-                'seat_number' => $rowLetter . $c,
-                'row'         => $rowLetter,
-                'column'      => $c,
-                'status'      => 'available',
-                'price'       => null,
-            ]);
+    {
+        if (!Auth::check() || Auth::user()->role !== 'admin') {
+            return response()->json(['error' => 'Only admins can create events'], 403);
         }
-    }
-        } catch (\Exception $e) {
-         return response()->json([
-           'message' => 'Event created but seats failed',
-          'error' => $e->getMessage(),
-          'event' => new EventResource($event),
-         ], 201);
-}
 
-    return response()->json([
-        'message' => 'Event created successfully',
-        'event'   => new EventResource($event),
-    ], 201);
-}
+        $validated = $request->validate([
+            'title'       => ['required', 'string', 'max:255'],
+            'slug'        => ['required', 'string', 'max:255', 'unique:events,slug'],
+            'description' => ['nullable', 'string'],
+            'venue'       => ['required', 'string', 'max:255'],
+            'city'        => ['nullable', 'string', 'max:255'],
+            'start_at'    => ['required', 'date'],
+            'end_at'      => ['nullable', 'date', 'after_or_equal:start_at'],
+            'rows'        => ['sometimes', 'integer', 'min:1', 'max:26'],
+            'columns'     => ['sometimes', 'integer', 'min:1', 'max:50'],
+        ]);
+
+        $rows = $validated['rows'] ?? 10;
+        $columns = $validated['columns'] ?? 10;
+
+        $event = DB::transaction(function () use ($validated, $rows, $columns) {
+            $event = Event::create([
+                'title'       => $validated['title'],
+                'slug'        => $validated['slug'],
+                'description' => $validated['description'] ?? null,
+                'venue'       => $validated['venue'],
+                'city'        => $validated['city'] ?? null,
+                'start_at'    => $validated['start_at'],
+                'end_at'      => $validated['end_at'] ?? null,
+            ]);
+
+            $rowLetters = range('A', 'Z');
+            for ($r = 0; $r < $rows; $r++) {
+                $rowLetter = $rowLetters[$r];
+                for ($c = 1; $c <= $columns; $c++) {
+                    Seat::create([
+                        'event_id'    => $event->id,
+                        'venue_id'    => null,
+                        'seat_number' => $rowLetter . $c,
+                        'row'         => $rowLetter,
+                        'column'      => $c,
+                        'status'      => 'available',
+                        'price'       => null,
+                    ]);
+                }
+            }
+
+            return $event;
+        });
+
+        return response()->json([
+            'message' => 'Event created successfully',
+            'event'   => new EventResource($event),
+        ], 201);
+    }
 
 
 
@@ -137,7 +132,7 @@ class EventController extends Controller
     {
         $event->load('ticketTypes');
 
-        
+
         return new EventResource($event);
     }
 

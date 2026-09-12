@@ -7,6 +7,7 @@ use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\TicketTypeController;
 use App\Http\Controllers\SeatSelectionController;
 use App\Http\Controllers\WaitlistEntryController;
+use App\Http\Controllers\ExternalDataController;
 use App\Models\Event;
 use App\Models\User;
 use App\Models\Purchase;
@@ -27,6 +28,18 @@ Route::get('/events/{event}/ticket-types', [TicketTypeController::class, 'indexF
 Route::get('/ticket-types/{ticketType}', [TicketTypeController::class, 'show']);
 
 Route::get('/public/events', [PublicEventsController::class, 'index']);
+Route::get('/external/weather', [ExternalDataController::class, 'weather']);
+Route::get('/external/exchange-rate', [ExternalDataController::class, 'exchangeRate']);
+
+Route::post('/contact', function (Request $request) {
+    $validated = $request->validate([
+        'name' => ['required', 'string', 'max:100'],
+        'email' => ['required', 'email', 'max:255'],
+        'message' => ['required', 'string', 'max:1000'],
+    ]);
+
+    return response()->json(['message' => 'Contact message received', 'data' => $validated], 202);
+});
 
 // Seat selection endpoints
 Route::get('/events/{event}/seat-selection/{ticketType}', [SeatSelectionController::class, 'show']);
@@ -45,6 +58,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::get('/events/{event}/queue/status', [PurchaseController::class, 'queueStatus']);
 
     Route::get('/purchases', [PurchaseController::class, 'index']);
+    Route::get('/my-purchases', [PurchaseController::class, 'index']);
     Route::post('/purchases', [PurchaseController::class, 'store']);
     Route::get('/purchases/{purchase}', [PurchaseController::class, 'show']);
     Route::post('/events/{event}/purchases/reserve', [PurchaseController::class, 'reserve']);
@@ -58,7 +72,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
 
     // Dashboard stats
     Route::get('/stats', function () {

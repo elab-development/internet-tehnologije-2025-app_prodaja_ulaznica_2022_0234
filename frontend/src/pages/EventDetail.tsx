@@ -3,7 +3,10 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useAlert } from '../hooks/useAlert';
 import { api } from '../services/api';
-import Master from '../components/layout/Master';
+import Master from '../Components/layout/Master';
+import EventMap from '../Components/maps/EventMap';
+import { geocodeAddress } from '../utils/geocoding';
+
 
 interface TicketType {
   id: number;
@@ -47,6 +50,17 @@ const EventDetail: React.FC = () => {
   const [waitlistEntry, setWaitlistEntry] = useState<any>(null);
   const [queueSize, setQueueSize] = useState<number | null>(null);
   const [reservation, setReservation] = useState<any>(null);
+  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    if (event) {
+      const fullAddress = `${event.venue}, ${event.city || 'Serbia'}`;
+      geocodeAddress(fullAddress).then(coords => {
+        setCoordinates(coords);
+      });
+    }
+  }, [event]);
+
   
   // Ticket selection state
   const [selectedTickets, setSelectedTickets] = useState<TicketSelection>({});
@@ -236,9 +250,6 @@ const EventDetail: React.FC = () => {
     }
   };
 
-  // Get time remaining for admitted users
-  
-
   if (loading) {
     return (
       <Master>
@@ -313,7 +324,6 @@ const EventDetail: React.FC = () => {
               </svg>
               <span className="font-semibold">Dosli ste na red! Izaberite karte i zavrsete kupovinu.</span>
             </div>
-            
           </div>
         </div>
       )}
@@ -332,7 +342,7 @@ const EventDetail: React.FC = () => {
             </div>
 
             {/* Ticket Types */}
-            <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="bg-white rounded-xl shadow-md p-6 mb-6">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">
                 {isAdmitted ? 'Izaberite karte' : 'Dostupne karte'}
               </h2>
@@ -398,6 +408,34 @@ const EventDetail: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* MAPA SEKCIJA */}
+            <div className="bg-white rounded-xl shadow-md p-6">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Lokacija</h2>
+              
+              {coordinates ? (
+                <>
+                  <EventMap
+                    latitude={coordinates.lat}
+                    longitude={coordinates.lng}
+                    title={event.title}
+                    venue={event.venue}
+                  />
+                  <div className="mt-4 flex items-start gap-2">
+                    <svg className="w-5 h-5 text-gray-600 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <p className="text-gray-700">{event.venue}{event.city ? `, ${event.city}` : ''}</p>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <p className="text-gray-500 mt-2">Učitavanje mape...</p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Order Summary - Sticky Sidebar */}
@@ -445,8 +483,6 @@ const EventDetail: React.FC = () => {
                   >
                     {purchasing ? 'Obrada...' : 'Izaberi sedista'}
                   </button>
-
-                  
 
                   <button
                     onClick={leaveWaitlist}
