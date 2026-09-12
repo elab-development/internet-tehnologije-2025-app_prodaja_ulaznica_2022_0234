@@ -12,7 +12,7 @@ use Illuminate\Validation\Rule;
 
 class TicketTypeController extends Controller
 {
-        #[OA\Get(
+    #[OA\Get(
         path: "/api/events/{event}/ticket-types",
         tags: ["Ticket Types"],
         summary: "Get ticket types for an event",
@@ -43,12 +43,12 @@ class TicketTypeController extends Controller
     public function indexForEvent(Request $request, Event $event)
     {
         $validated = $request->validate([
-            'is_active' => ['sometimes', Rule::in(['0','1',0,1,true,false])],
+            'is_active' => ['sometimes', Rule::in(['0', '1', 0, 1, true, false])],
             'category'  => ['sometimes', 'string', 'max:255'],
             'min_price' => ['sometimes', 'numeric', 'min:0'],
             'max_price' => ['sometimes', 'numeric', 'min:0'],
-            'sort_by'   => ['sometimes', Rule::in(['price','name','created_at'])],
-            'sort_dir'  => ['sometimes', Rule::in(['asc','desc'])],
+            'sort_by'   => ['sometimes', Rule::in(['price', 'name', 'created_at'])],
+            'sort_dir'  => ['sometimes', Rule::in(['asc', 'desc'])],
             'page'      => ['sometimes', 'integer', 'min:1'],
             'per_page'  => ['sometimes', 'integer', 'min:1', 'max:100'],
         ]);
@@ -86,6 +86,42 @@ class TicketTypeController extends Controller
         return TicketTypeResource::collection($types);
     }
 
+    #[OA\Post(
+        path: "/api/events/{event}/ticket-types",
+        tags: ["Ticket Types"],
+        summary: "Create a ticket type for an event",
+        description: "Admin only",
+        parameters: [
+            new OA\Parameter(
+                name: "event",
+                in: "path",
+                required: true,
+                description: "Event ID",
+                schema: new OA\Schema(type: "integer")
+            )
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ["name", "price", "quantity_total"],
+                properties: [
+                    new OA\Property(property: "name", type: "string", example: "VIP"),
+                    new OA\Property(property: "category", type: "string", example: "standard"),
+                    new OA\Property(property: "price", type: "number", example: 2500),
+                    new OA\Property(property: "quantity_total", type: "integer", example: 100),
+                    new OA\Property(property: "sales_start_at", type: "string", format: "date-time"),
+                    new OA\Property(property: "sales_end_at", type: "string", format: "date-time"),
+                    new OA\Property(property: "is_active", type: "boolean"),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: "Ticket type created"),
+            new OA\Response(response: 403, description: "Only admins can create ticket types")
+        ]
+    )]
+
+
     public function store(Request $request, Event $event)
     {
         if (!Auth::check() || Auth::user()->role !== 'admin') {
@@ -93,14 +129,14 @@ class TicketTypeController extends Controller
         }
 
         $validated = $request->validate([
-            'name'           => ['required','string','max:255'],
-            'category'       => ['nullable','string','max:255'],
-            'price'          => ['required','numeric','min:0'],
-            'quantity_total' => ['required','integer','min:1'],
-            'quantity_sold'  => ['sometimes','integer','min:0'],
-            'sales_start_at' => ['nullable','date'],
-            'sales_end_at'   => ['nullable','date','after_or_equal:sales_start_at'],
-            'is_active'      => ['sometimes','boolean'],
+            'name'           => ['required', 'string', 'max:255'],
+            'category'       => ['nullable', 'string', 'max:255'],
+            'price'          => ['required', 'numeric', 'min:0'],
+            'quantity_total' => ['required', 'integer', 'min:1'],
+            'quantity_sold'  => ['sometimes', 'integer', 'min:0'],
+            'sales_start_at' => ['nullable', 'date'],
+            'sales_end_at'   => ['nullable', 'date', 'after_or_equal:sales_start_at'],
+            'is_active'      => ['sometimes', 'boolean'],
         ]);
 
         $ticketType = TicketType::create(array_merge($validated, ['event_id' => $event->id]));
@@ -181,14 +217,14 @@ class TicketTypeController extends Controller
         }
 
         $validated = $request->validate([
-            'name'           => ['sometimes','string','max:255'],
-            'category'       => ['sometimes','nullable','string','max:255'],
-            'price'          => ['sometimes','numeric','min:0'],
-            'quantity_total' => ['sometimes','integer','min:1'],
+            'name'           => ['sometimes', 'string', 'max:255'],
+            'category'       => ['sometimes', 'nullable', 'string', 'max:255'],
+            'price'          => ['sometimes', 'numeric', 'min:0'],
+            'quantity_total' => ['sometimes', 'integer', 'min:1'],
             // quantity_sold ne otvaramo za update, kontrola je kroz kupovinu
-            'sales_start_at' => ['sometimes','nullable','date'],
-            'sales_end_at'   => ['sometimes','nullable','date','after_or_equal:sales_start_at'],
-            'is_active'      => ['sometimes','boolean'],
+            'sales_start_at' => ['sometimes', 'nullable', 'date'],
+            'sales_end_at'   => ['sometimes', 'nullable', 'date', 'after_or_equal:sales_start_at'],
+            'is_active'      => ['sometimes', 'boolean'],
         ]);
 
         $ticketType->update($validated);
