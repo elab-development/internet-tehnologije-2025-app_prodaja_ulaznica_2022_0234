@@ -10,6 +10,8 @@ services:
       MYSQL_ROOT_PASSWORD: root
     ports:
       - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
       interval: 10s
@@ -41,8 +43,6 @@ services:
       DB_USERNAME: tickets
       DB_PASSWORD: tickets
       FRONTEND_URL: http://localhost:5173
-    volumes:
-      - ./tickets:/var/www/html
     command: sh -c "php artisan migrate --force && php artisan db:seed --force && php artisan serve --host=0.0.0.0 --port=8000"
 
   frontend:
