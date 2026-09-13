@@ -110,7 +110,7 @@ const AdminDashboard: React.FC = () => {
         api.get('/stats').catch(() => ({ data: null })),
         api.get('/events').catch(() => ({ data: [] })),
         api.get('/users').catch(() => ({ data: [] })),
-        api.get('/purchases').catch(() => ({ data: [] })),
+        api.get('/admin/purchases').catch(() => ({ data: [] })),
       ]);
       
       setStats(statsRes.data || {

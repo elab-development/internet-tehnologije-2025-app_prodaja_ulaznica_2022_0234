@@ -9,12 +9,13 @@ export interface User {
 
 export interface Event {
   id: number;
-  name: string;
+  title: string;
+  slug?: string;
   description: string;
-  date: string;
-  location: string;
-  latitude?: number;   
-  longitude?: number;
+  venue: string;
+  city?: string;
+  start_at: string;
+  end_at?: string;
   image?: string;
   available_tickets?: number;
   total_tickets?: number;

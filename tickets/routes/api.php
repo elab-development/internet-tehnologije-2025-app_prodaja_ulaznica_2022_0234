@@ -86,6 +86,15 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
         ]);
     });
 
+    // All purchases across all users
+    Route::get('/admin/purchases', function () {
+        $purchases = Purchase::with(['user', 'event', 'ticketType'])
+            ->latest()
+            ->get();
+
+        return response()->json($purchases);
+    });
+
     // Users list
     Route::get('/users', function () {
         return User::withCount('purchases')->get();

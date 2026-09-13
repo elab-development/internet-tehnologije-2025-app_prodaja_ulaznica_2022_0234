@@ -73,7 +73,7 @@ class WaitlistService
         // find expired reserved purchases
         $now = Carbon::now();
 
-        $expired = Purchase::where('status', 'reserved')
+        $expired = Purchase::where('status', 'pending')
             ->whereNotNull('reserved_until')
             ->where('reserved_until', '<', $now)
             ->get();

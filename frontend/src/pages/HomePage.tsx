@@ -103,7 +103,7 @@ const HomePage: React.FC = () => {
                   {event.image ? (
                     <img
                       src={event.image}
-                      alt={event.name}
+                      alt={event.title}
                       className="w-full h-48 object-cover"
                     />
                   ) : (
@@ -125,7 +125,7 @@ const HomePage: React.FC = () => {
                   )}
                   <div className="p-5">
                     <h3 className="text-xl font-bold text-gray-800 mb-2 line-clamp-1">
-                      {event.name}
+                      {event.title}
                     </h3>
                     <p className="text-gray-600 text-sm mb-3 line-clamp-2">
                       {event.description}
@@ -145,7 +145,7 @@ const HomePage: React.FC = () => {
                             d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                           />
                         </svg>
-                        {formatDate(event.date)}
+                        {formatDate(event.start_at)}
                       </div>
                       <div className="flex items-center text-gray-600 text-sm">
                         <svg
@@ -167,7 +167,7 @@ const HomePage: React.FC = () => {
                             d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                           />
                         </svg>
-                        {event.location}
+                        {event.venue}{event.city ? `, ${event.city}` : ''}
                       </div>
                     </div>
                     <div className="flex justify-between items-center pt-3 border-t">
